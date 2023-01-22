@@ -1,0 +1,6 @@
+#!/bin/sh
+### TYPE: builtin
+echo "Waiting 5 seconds..."
+sleep 5
+cd /home/pi/MonsterVision2
+exec ./MonsterVision2.py
