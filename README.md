@@ -1,5 +1,5 @@
 # How to Set Up MonsterVision3 for Development
-This document covers installing MV3 on a Raspberry Pi development machine. See (???)) for deployment instructions.
+This document covers installing MV3 on a Raspberry Pi development machine. See [here](#How-to-Set-Up-MonsterVision3-for-Development) for deployment instructions.
 
 It is recommeneded (but not required) that you use an SSD rather than an SD card on your Pi.  If you do, you may need to enable your Pi to boot from the SSD.  This only needs to be done once.  [Follow these instructions.](https://peyanski.com/how-to-boot-raspberry-pi-4-from-ssd/#:~:text=To%20boot%20Raspberry%20Pi%204%20from%20SSD%20you,USB%20to%20boot%20raspberry%20Pi%204%20from%20SSD.)
 
