@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 import sys
 import time
@@ -22,9 +23,6 @@ class OAK:
     rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
     rgbWidth = 1920
     rgbHeight = 1080
-    ispScale = (4, 7)
-    ispWidth = rgbWidth * ispScale[0]/ispScale[1]
-    ispHeight = rgbHeight * ispScale[0]/ispScale[1]
 
     bbfraction = 0.2
 
@@ -144,12 +142,27 @@ class OAK:
 
         self.xoutIsp = self.pipeline.create(dai.node.XLinkOut)
         self.manip = self.pipeline.create(dai.node.ImageManip)
+        self.xoutStereoDepth = self.pipeline.create(dai.node.XLinkOut)
         self.xoutIsp.setStreamName("isp")
+        self.xoutStereoDepth.setStreamName("stereo-depth")
+
+        self.manip.setMaxOutputFrameSize(3110400)
+        self.manip.initialConfig.setCropRect(self.xCropMin, self.yCropMin, self.xCropMax, self.yCropMax)
+        # self.manip.initialConfig.setResize(0.25)
+        cc = self.manip.initialConfig.getCropConfig()
+        xmin = self.manip.initialConfig.getCropXMin()
+        xmax = self.manip.initialConfig.getCropXMax()
+        ymin = self.manip.initialConfig.getCropYMin()
+        ymax = self.manip.initialConfig.getCropYMax()
+
+        ht = self.manip.initialConfig.getResizeHeight()
+        wd = self.manip.initialConfig.getResizeWidth()
 
         # splice them into the pipeline
 
         self.manip.out.link(self.xoutIsp.input)
         self.camRgb.isp.link(self.manip.inputImage)
+        self.stereo.depth.link(self.xoutStereoDepth.input)
 
     def displayDebug(self, device):
         ispQueue = device.getOutputQueue(name="isp", maxSize=4, blocking=False)
@@ -158,8 +171,43 @@ class OAK:
 
         cv2.imshow("isp", ispFrame)
 
-    
+        ispQstereoDepthQueue = device.getOutputQueue(name="stereo-depth", maxSize=4, blocking=False)
+        dpt = ispQstereoDepthQueue.get()
+        dptFrame = dpt.getCvFrame()
+
+        dfc = cv2.normalize(dptFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        dfc = cv2.equalizeHist(dfc)
+        dfc = cv2.applyColorMap(dfc, cv2.COLORMAP_RAINBOW)
+
+        cv2.imshow("stereo-depth", dfc)
+
+
     def buildPipeline(self, spatialDetectionNetwork):
+
+        scaleIt = 1.17
+
+        htScale = self.rgbHeight / self.inputSize[1]
+        wdScale = self.rgbWidth / self.inputSize[0]
+
+        if htScale <= wdScale:
+            gcd = math.gcd(self.rgbHeight, self.inputSize[1])
+            self.ispScale = (int(self.inputSize[1] / gcd), int(self.rgbHeight / gcd))
+            self.yCropMin = 0.0
+            self.yCropMax = 1.0
+            xCrop = 1.0 - (self.inputSize[0] * htScale / self.rgbWidth)
+            self.xCropMin = xCrop/2
+            self.xCropMax = 1.0 - xCrop/2
+        else:
+            gcd = math.gcd(self.rgbWidth, self.inputSize[0])
+            self.ispScale = (int(self.inputSize[0] / gcd), int(self.rgbWidth / gcd))
+            self.xCropMin = 0.0
+            self.xCropMax = 1.0
+            yCrop = 1.0 - (self.inputSize[1] * wdScale / self.rgbHeight)
+            self.yCropMin = yCrop/2
+            self.yCropMax = 1.0 - yCrop/2
+
+        self.ispWidth = self.rgbWidth * self.ispScale[0]/self.ispScale[1]
+        self.ispHeight = self.rgbHeight * self.ispScale[0]/self.ispScale[1]
 
         # Define sources and outputs
 
