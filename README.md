@@ -79,7 +79,7 @@ To enable GitHub integration, you need to install the above-named extension.  Af
 - From the list of interpreters, choose the one in your virtual environment.  It will look something like this: `Python n.n.n ('env':venv) ./env/bin/python`
 - From the left pane, select `MonsterVision3.py` to open it.
 Either hit `F5` or select **Run**|**Start Debugging** to run MonsterVision3 under control of the debugger.
-# How to Install MonsterV3 for FRC Competition
+# How to Install MonsterVision3 for FRC Competition
 Worcester Polytechnic Institute (WPI), the creators and maintainers of the WPI Library we use for FRC robot development have create WPILibPi, a derivative of the Raspberry Pi OS, Raspbian. This Raspbian-based Raspberry Pi image includes C++, Java, and Python libraries required for vision coprocessor development for FRC (e.g. opencv, cscore, ntcore, robotpy-cscore, pynetworktables, Java 11, etc). WPILibPi comes in two variants, the "base" image for vision coprocessors, and an image designed for use with Pololu Romi 32U4 based robots.  Please follow these instructions to [install WPILibPi on an SD card.](https://docs.wpilib.org/en/stable/docs/software/vision-processing/wpilibpi/installing-the-image-to-your-microsd-card.html).  Make sure you have the latest release.  Follow all instructions on the web page up to and including last step where you log into a remote terminal.  Use the SSH command from a command prompt:
 ```shell
 ssh wpilibpi.local -l pi
