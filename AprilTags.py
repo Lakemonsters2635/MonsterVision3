@@ -15,15 +15,33 @@ class AprilTags:
     def calc_tan_angle(self, offset, depthWidth):
         return offset * self.tanHalfHFOV / (depthWidth / 2.0)
 
+
+    def mapXCoord(self, Big):
+        return int((Big + self.xMin) * self.xScale)
+
+
+    def mapYCoord(self, Big):
+        return int((Big + self.yMin) * self.yScale)
+
+    def mapCoords(self,pt):
+        return (self.mapYCoord(pt[0]), self.mapXCoord(pt[1]))
+
+
     # This code assumes depth symmetry around the centroid
 
     # Calculate spatial coordinates from depth map and bounding box (ROI)
-    def calc_spatials(self, bbox, centroidX, centroidY, depth, depthWidth, averaging_method=np.median):
+
+    def calc_spatials(self, bbox, centroidX, centroidY, depth, inputShape, averaging_method=np.median):
         xmin, ymin, xmax, ymax = bbox
         if xmin > xmax:  # bbox flipped
             xmin, xmax = xmax, xmin
         if ymin > ymax:  # bbox flipped
             ymin, ymax = ymax, ymin
+
+        xmin = self.mapXCoord(xmin)
+        xmax = self.mapXCoord(xmax)
+        ymin = self.mapYCoord(xmin)
+        ymax = self.mapYCoord(xmax)
 
         if xmin == xmax or ymin == ymax: # Box of size zero
             return None
@@ -38,14 +56,16 @@ class AprilTags:
 
         # angle_x = calc_angle(bb_x_pos, depthWidth)
         # angle_y = calc_angle(bb_y_pos, depthWidth)
-        tanAngle_x = self.calc_tan_angle(bb_x_pos, depthWidth)
-        tanAngle_y = self.calc_tan_angle(bb_y_pos, depthWidth)
+        tanAngle_x = self.calc_tan_angle(bb_x_pos, depth.shape[1])
+        tanAngle_y = self.calc_tan_angle(bb_y_pos, depth.shape[1])
 
         z = averageDepth
         x = z * tanAngle_x
         y = -z * tanAngle_y
 
         return (x,y,z)
+
+
         
     def __init__(self, tagFamilies, rgbHFOV = None):
         options = apriltag.DetectorOptions(families="tag16h5")
@@ -64,6 +84,25 @@ class AprilTags:
 
 
     def detect(self, imageFrame, depthFrame, depthFrameColor):
+        xScale = depthFrame.shape[1] / imageFrame.shape[1]
+        yScale = depthFrame.shape[0] / imageFrame.shape[0]
+
+        if xScale > yScale:
+            dim = (int(imageFrame.shape[0]*depthFrame.shape[1]/depthFrame.shape[0]), int(imageFrame.shape[0]))
+            self.xMin = int((dim[0] - imageFrame.shape[1])/2)
+            # self.xMax = int(dim[0] - xmin)
+            self.yMin = 0
+            self.yMax = imageFrame.shape[0]
+        else:
+            dim = (int(imageFrame.shape[1]), int(imageFrame.shape[1]*depthFrame.shape[0]/depthFrame.shape[1]))
+            self.yMin = int((dim[1] - imageFrame.shape[0])/2)
+            # self.yMax = int(dim[1] - ymin)
+            self.xMin = 0
+            self.xMax = imageFrame.shape[1]
+
+        self.xScale = dim[0] / imageFrame.shape[1]
+        self.yScale = dim[1] / imageFrame.shape[0]
+
         gray = cv2.cvtColor(imageFrame, cv2.COLOR_BGR2GRAY)
         results = self.detector.detect(gray)
 
@@ -89,7 +128,8 @@ class AprilTags:
 
             # draw the bounding box of the AprilTag detection
             self.drawBoundingBox(imageFrame, ptA, ptB, ptC, ptD, (0, 255, 0), 2)
-            self.drawBoundingBox(depthFrameColor, ptA, ptB, ptC, ptD, (0, 255, 0), 2)
+            # self.drawBoundingBox(depthFrameColor, self.mapCoords(ptA), self.mapCoords(ptB), self.mapCoords(ptC), self.mapCoords(ptD), (255, 0, 255), 2)
+            self.drawBoundingBox(depthFrameColor, ptA, ptB, ptC, ptD, (255, 0, 255), 2)
 
             # draw the center (x, y)-coordinates of the AprilTag
             (cX, cY) = (int(r.center[0]), int(r.center[1]))

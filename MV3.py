@@ -163,71 +163,75 @@ class OAK:
 
     def buildDebugPipeline(self):
 
-        self.manip = self.pipeline.create(dai.node.ImageManip)
-        self.manip.setMaxOutputFrameSize(1382400)
-        self.xoutStereoDepth = self.pipeline.create(dai.node.XLinkOut)
-        self.xoutStereoDepth.setStreamName("stereo-depth")
-        self.xoutIsp = self.pipeline.create(dai.node.XLinkOut)
+        # self.manip = self.pipeline.create(dai.node.ImageManip)
+        # self.manip.setMaxOutputFrameSize(1382400)
+        # self.xoutStereoDepth = self.pipeline.create(dai.node.XLinkOut)
+        # self.xoutStereoDepth.setStreamName("stereo-depth")
+        # self.xoutIsp = self.pipeline.create(dai.node.XLinkOut)
 
-        self.ispScale = (2,3)
-        self.camRgb.setIspScale(self.ispScale[0], self.ispScale[1])
+        # self.ispScale = (2,3)
+        # self.camRgb.setIspScale(self.ispScale[0], self.ispScale[1])
 
 
-        # splice them into the pipeline
+        # # splice them into the pipeline
 
-        if True:
-            self.manip.out.link(self.xoutIsp.input)
-            self.camRgb.isp.link(self.manip.inputImage)
-            self.strName1 = "manip"
-        else:
-            self.camRgb.isp.link(self.xoutIsp.input)
-            self.strName1 = "isp"
+        # if True:
+        #     self.manip.out.link(self.xoutIsp.input)
+        #     self.camRgb.isp.link(self.manip.inputImage)
+        #     self.strName1 = "manip"
+        # else:
+        #     self.camRgb.isp.link(self.xoutIsp.input)
+        #     self.strName1 = "isp"
 
-        self.xoutIsp.setStreamName(self.strName1)
-        self.stereo.depth.link(self.xoutStereoDepth.input)
+        # self.xoutIsp.setStreamName(self.strName1)
+        # self.stereo.depth.link(self.xoutStereoDepth.input)
 
-        cv2.namedWindow("blended")
-        cv2.createTrackbar('RGB Weight %', "blended", int(rgbWeight*100), 100, updateBlendWeights)
-
+        # cv2.namedWindow("blended")
+        # cv2.createTrackbar('RGB Weight %', "blended", int(rgbWeight*100), 100, updateBlendWeights)
+        return
+        
 
     def displayDebug(self, device):
-        ispQueue = device.getOutputQueue(name=self.strName1, maxSize=4, blocking=False)
-        isp = ispQueue.get()
-        ispFrame = isp.getCvFrame()
+        # ispQueue = device.getOutputQueue(name=self.strName1, maxSize=4, blocking=False)
+        # isp = ispQueue.get()
+        # ispFrame = isp.getCvFrame()
 
-        xScale = self.monoWidth / self.inputSize[0]
-        yScale = self.monoHeight / self.inputSize[1]
+        # xScale = self.monoWidth / self.inputSize[0]
+        # yScale = self.monoHeight / self.inputSize[1]
 
-        if xScale > yScale:
-            dim = (int(self.inputSize[1]*self.monoWidth/self.monoHeight), int(self.inputSize[1]))
-            xmin = int((dim[0] - self.inputSize[0])/2)
-            xmax = int(dim[0] - xmin)
-            ymin = 0
-            ymax = self.inputSize[1]
-        else:
-            dim = (int(self.inputSize[0]), int(self.inputSize[0]*self.monoHeight/self.monoWidth))
-            ymin = int((dim[1] - self.inputSize[1])/2)
-            ymax = int(dim[1] - ymin)
-            xmin = 0
-            xmax = self.inputSize[0]
+        # if xScale > yScale:
+        #     dim = (int(self.inputSize[1]*self.monoWidth/self.monoHeight), int(self.inputSize[1]))
+        #     xmin = int((dim[0] - self.inputSize[0])/2)
+        #     xmax = int(dim[0] - xmin)
+        #     ymin = 0
+        #     ymax = self.inputSize[1]
+        # else:
+        #     dim = (int(self.inputSize[0]), int(self.inputSize[0]*self.monoHeight/self.monoWidth))
+        #     ymin = int((dim[1] - self.inputSize[1])/2)
+        #     ymax = int(dim[1] - ymin)
+        #     xmin = 0
+        #     xmax = self.inputSize[0]
 
-        r = cv2.resize(ispFrame, dim)
-        s = r[ymin:ymax, xmin:xmax]
-        cv2.imshow(self.strName1, s)
+        # x = dim[0] / self.inputSize[0]
+        # y = dim[1] / self.inputSize[1]
 
-        ispQstereoDepthQueue = device.getOutputQueue(name="stereo-depth", maxSize=4, blocking=False)
-        dpt = ispQstereoDepthQueue.get()
-        dptFrame = dpt.getCvFrame()
+        # r = cv2.resize(ispFrame, dim)
+        # s = r[ymin:ymax, xmin:xmax]
+        # cv2.imshow(self.strName1, s)
 
-        dfc = cv2.normalize(dptFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        dfc = cv2.equalizeHist(dfc)
-        dfc = cv2.applyColorMap(dfc, cv2.COLORMAP_RAINBOW)
+        # ispQstereoDepthQueue = device.getOutputQueue(name="stereo-depth", maxSize=4, blocking=False)
+        # dpt = ispQstereoDepthQueue.get()
+        # dptFrame = dpt.getCvFrame()
 
-        # cv2.imshow("stereo-depth", dfc)
+        # dfc = cv2.normalize(dptFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        # dfc = cv2.equalizeHist(dfc)
+        # dfc = cv2.applyColorMap(dfc, cv2.COLORMAP_RAINBOW)
 
-        blended = cv2.addWeighted(ispFrame, rgbWeight, dfc, depthWeight, 0)
-        cv2.imshow("blended", blended)
+        # # cv2.imshow("stereo-depth", dfc)
 
+        # blended = cv2.addWeighted(ispFrame, rgbWeight, dfc, depthWeight, 0)
+        # cv2.imshow("blended", blended)
+        return
 
     def buildPipeline(self, spatialDetectionNetwork):
 
