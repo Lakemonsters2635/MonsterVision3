@@ -8,6 +8,24 @@ import cv2
 
 INCHES_PER_MILLIMETER = 39.37 / 1000
 
+# Weights to use when blending depth/rgb image (should equal 1.0)
+rgbWeight = 0.4
+depthWeight = 0.6
+
+
+def updateBlendWeights(percent_rgb):
+    """
+    Update the rgb and depth weights used to blend depth/rgb image
+
+    @param[in] percent_rgb The rgb weight expressed as a percentage (0..100)
+    """
+    global depthWeight
+    global rgbWeight
+    rgbWeight = float(percent_rgb)/100.0
+    depthWeight = 1.0 - rgbWeight
+
+
+
 def _average_depth_coord(pt1, pt2, padding_factor):
     factor = 1 - padding_factor
     x_shift = (pt2[0] - pt1[0]) * factor / 2
@@ -18,7 +36,11 @@ def _average_depth_coord(pt1, pt2, padding_factor):
 
 
 class OAK:
+    LaserDotProjectorCurrent = 0
+
     monoResolution = dai.MonoCameraProperties.SensorResolution.THE_720_P
+    monoWidth = 1280
+    monoHeight = 720
 
     rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
     rgbWidth = 1920
@@ -33,6 +55,8 @@ class OAK:
 
     syncNN = True
 
+    def __init__(self, LaserDotProjectorCurrent=None):
+        self.LaserDotProjectorCurrent = LaserDotProjectorCurrent
 
 
     NN_FILE = "/boot/nn.json"
@@ -138,38 +162,58 @@ class OAK:
         return spatialDetectionNetwork
 
     def buildDebugPipeline(self):
-        # define additional sources and outputs
 
-        self.xoutIsp = self.pipeline.create(dai.node.XLinkOut)
         self.manip = self.pipeline.create(dai.node.ImageManip)
+        self.manip.setMaxOutputFrameSize(1382400)
         self.xoutStereoDepth = self.pipeline.create(dai.node.XLinkOut)
-        self.xoutIsp.setStreamName("isp")
         self.xoutStereoDepth.setStreamName("stereo-depth")
+        self.xoutIsp = self.pipeline.create(dai.node.XLinkOut)
 
-        self.manip.setMaxOutputFrameSize(3110400)
-        self.manip.initialConfig.setCropRect(self.xCropMin, self.yCropMin, self.xCropMax, self.yCropMax)
-        # self.manip.initialConfig.setResize(0.25)
-        cc = self.manip.initialConfig.getCropConfig()
-        xmin = self.manip.initialConfig.getCropXMin()
-        xmax = self.manip.initialConfig.getCropXMax()
-        ymin = self.manip.initialConfig.getCropYMin()
-        ymax = self.manip.initialConfig.getCropYMax()
+        self.ispScale = (2,3)
+        self.camRgb.setIspScale(self.ispScale[0], self.ispScale[1])
 
-        ht = self.manip.initialConfig.getResizeHeight()
-        wd = self.manip.initialConfig.getResizeWidth()
 
         # splice them into the pipeline
 
-        self.manip.out.link(self.xoutIsp.input)
-        self.camRgb.isp.link(self.manip.inputImage)
+        if True:
+            self.manip.out.link(self.xoutIsp.input)
+            self.camRgb.isp.link(self.manip.inputImage)
+            self.strName1 = "manip"
+        else:
+            self.camRgb.isp.link(self.xoutIsp.input)
+            self.strName1 = "isp"
+
+        self.xoutIsp.setStreamName(self.strName1)
         self.stereo.depth.link(self.xoutStereoDepth.input)
 
+        cv2.namedWindow("blended")
+        cv2.createTrackbar('RGB Weight %', "blended", int(rgbWeight*100), 100, updateBlendWeights)
+
+
     def displayDebug(self, device):
-        ispQueue = device.getOutputQueue(name="isp", maxSize=4, blocking=False)
+        ispQueue = device.getOutputQueue(name=self.strName1, maxSize=4, blocking=False)
         isp = ispQueue.get()
         ispFrame = isp.getCvFrame()
 
-        cv2.imshow("isp", ispFrame)
+        xScale = self.monoWidth / self.inputSize[0]
+        yScale = self.monoHeight / self.inputSize[1]
+
+        if xScale > yScale:
+            dim = (int(self.inputSize[1]*self.monoWidth/self.monoHeight), int(self.inputSize[1]))
+            xmin = int((dim[0] - self.inputSize[0])/2)
+            xmax = int(dim[0] - xmin)
+            ymin = 0
+            ymax = self.inputSize[1]
+        else:
+            dim = (int(self.inputSize[0]), int(self.inputSize[0]*self.monoHeight/self.monoWidth))
+            ymin = int((dim[1] - self.inputSize[1])/2)
+            ymax = int(dim[1] - ymin)
+            xmin = 0
+            xmax = self.inputSize[0]
+
+        r = cv2.resize(ispFrame, dim)
+        s = r[ymin:ymax, xmin:xmax]
+        cv2.imshow(self.strName1, s)
 
         ispQstereoDepthQueue = device.getOutputQueue(name="stereo-depth", maxSize=4, blocking=False)
         dpt = ispQstereoDepthQueue.get()
@@ -179,35 +223,13 @@ class OAK:
         dfc = cv2.equalizeHist(dfc)
         dfc = cv2.applyColorMap(dfc, cv2.COLORMAP_RAINBOW)
 
-        cv2.imshow("stereo-depth", dfc)
+        # cv2.imshow("stereo-depth", dfc)
+
+        blended = cv2.addWeighted(ispFrame, rgbWeight, dfc, depthWeight, 0)
+        cv2.imshow("blended", blended)
 
 
     def buildPipeline(self, spatialDetectionNetwork):
-
-        scaleIt = 1.17
-
-        htScale = self.rgbHeight / self.inputSize[1]
-        wdScale = self.rgbWidth / self.inputSize[0]
-
-        if htScale <= wdScale:
-            gcd = math.gcd(self.rgbHeight, self.inputSize[1])
-            self.ispScale = (int(self.inputSize[1] / gcd), int(self.rgbHeight / gcd))
-            self.yCropMin = 0.0
-            self.yCropMax = 1.0
-            xCrop = 1.0 - (self.inputSize[0] * htScale / self.rgbWidth)
-            self.xCropMin = xCrop/2
-            self.xCropMax = 1.0 - xCrop/2
-        else:
-            gcd = math.gcd(self.rgbWidth, self.inputSize[0])
-            self.ispScale = (int(self.inputSize[0] / gcd), int(self.rgbWidth / gcd))
-            self.xCropMin = 0.0
-            self.xCropMax = 1.0
-            yCrop = 1.0 - (self.inputSize[1] * wdScale / self.rgbHeight)
-            self.yCropMin = yCrop/2
-            self.yCropMax = 1.0 - yCrop/2
-
-        self.ispWidth = self.rgbWidth * self.ispScale[0]/self.ispScale[1]
-        self.ispHeight = self.rgbHeight * self.ispScale[0]/self.ispScale[1]
 
         # Define sources and outputs
 
@@ -230,7 +252,6 @@ class OAK:
         self.camRgb.setResolution(self.rgbResolution)
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-        self.camRgb.setIspScale(self.ispScale[0], self.ispScale[1])                # Results in 1280 x 720 (W x H) image
         self.camRgb.setFps(self.CAMERA_FPS)
         print("Camera FPS: {}".format(self.camRgb.getFps()))
 
@@ -255,7 +276,7 @@ class OAK:
         self.stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
         self.stereo.setLeftRightCheck(True)
         self.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-        self.stereo.setOutputSize(self.inputSize[0], self.inputSize[1])
+        self.stereo.setOutputSize(self.monoLeft.getResolutionWidth(), self.monoLeft.getResolutionHeight())
 
         # Linking
 
@@ -277,10 +298,6 @@ class OAK:
 
         self.buildDebugPipeline()
 
-        # jsonStr = self.pipeline.serializeToJson()
-        # with open("pipeline.json", "wt", encoding="utf-8") as f:
-        #     d = json.dumps(jsonStr)#, indent=4, separators=(". ", " = "))
-        #     f.write(d)
 
 
     def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None):
@@ -304,6 +321,9 @@ class OAK:
             startTime = time.monotonic()
             counter = 0
             self.fps = 0
+
+            if self.LaserDotProjectorCurrent is not None:
+                device.setIrLaserDotProjectorBrightness(self.LaserDotProjectorCurrent)
 
             while True:
                 self.inPreview = previewQueue.get()

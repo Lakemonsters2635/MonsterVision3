@@ -25,6 +25,7 @@ class FRC:
     ntinst = None
     sd = None
     frame_counter = 0
+    LaserDotProjectorCurrent = 0
     
 
     # Return True if we're running on Romi.  False if we're a coprocessor on a big 'bot
@@ -91,6 +92,14 @@ class FRC:
             else:
                 self.parse_error("could not understand ntmode value '{}'".format(s))
 
+        # LaserDotProjectorCurrent
+        try:
+            self.LaserDotProjectorCurrent = j["LaserDotProjectorCurrent"]
+        except KeyError:
+            self.LaserDotProjectorCurrent = 0
+
+        self.LaserDotProjectorCurrent *= 1.0
+        
         return True
     
     def start(self, previewWidth, previewHeight):
@@ -123,8 +132,8 @@ class FRC:
         if self.hasDisplay:
             cv2.imshow("depth", depthFrameColor)
             cv2.imshow("frame", frame)
-            blended = cv2.addWeighted(frame, 0.4, depthFrameColor, 0.6, 0)
-            cv2.imshow("blended", blended)
+            # blended = cv2.addWeighted(frame, 0.4, depthFrameColor, 0.6, 0)
+            # cv2.imshow("blended", blended)
 
         if cscoreAvailable:
             if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:

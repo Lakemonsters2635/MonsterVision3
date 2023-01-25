@@ -2,9 +2,11 @@
 
 import json
 import FRC
-import OAK
 import AprilTags
 import cv2
+import importlib
+
+OAK = importlib.import_module("MV3")            # Allows substitution of other pilelines!
 
 PREVIEW_WIDTH = 200
 PREVIEW_HEIGHT = 200
@@ -27,7 +29,7 @@ def displayResults(frame, depthFrameColor):
 frc = FRC.FRC()
 frc.start(PREVIEW_WIDTH, PREVIEW_HEIGHT)
 
-oak = OAK.OAK()
+oak = OAK.OAK(frc.LaserDotProjectorCurrent)
 nnConfig = oak.read_nn_config()
 
 spatialDetectionNetwork = oak.setupSDN(nnConfig)
@@ -35,4 +37,3 @@ oak.buildPipeline(spatialDetectionNetwork)
 
 
 oak.runPipeline(processDetections, objectsCallback, displayResults, processApriltags)
-i = 5
