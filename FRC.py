@@ -26,6 +26,8 @@ class FRC:
     sd = None
     frame_counter = 0
     LaserDotProjectorCurrent = 0
+
+    cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     
 
     # Return True if we're running on Romi.  False if we're a coprocessor on a big 'bot

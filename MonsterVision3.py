@@ -11,7 +11,7 @@ OAK = importlib.import_module("MV3")            # Allows substitution of other p
 PREVIEW_WIDTH = 200
 PREVIEW_HEIGHT = 200
 
-aprilTags = AprilTags.AprilTags("tag16h5")
+aprilTags = AprilTags.AprilTags("tag16h5")  
 
 def processApriltags(imageFrame, depthFrame, depthFrameColor):
     return aprilTags.detect(imageFrame, depthFrame, depthFrameColor)
