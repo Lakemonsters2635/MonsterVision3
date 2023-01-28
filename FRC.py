@@ -27,7 +27,7 @@ class FRC:
     frame_counter = 0
     LaserDotProjectorCurrent = 0
 
-    cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+    # cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     
 
     # Return True if we're running on Romi.  False if we're a coprocessor on a big 'bot
@@ -130,16 +130,17 @@ class FRC:
         self.sd.putString("ObjectTracker", jsonObjects)
         self.ntinst.flush()
 
-    def displayResults(self, frame, depthFrameColor):
+    def displayResults(self, fullFrame, depthFrameColor, detectionFrame):
         if self.hasDisplay:
             cv2.imshow("depth", depthFrameColor)
-            cv2.imshow("frame", frame)
+            cv2.imshow("detections", detectionFrame)
+            cv2.imshow("tags", fullFrame)
             # blended = cv2.addWeighted(frame, 0.4, depthFrameColor, 0.6, 0)
             # cv2.imshow("blended", blended)
 
         if cscoreAvailable:
             if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:
-                self.output.putFrame(frame)
+                self.output.putFrame(detectionFrame)
 
             self.frame_counter += 1
 

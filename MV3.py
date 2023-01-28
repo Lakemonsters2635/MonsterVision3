@@ -180,8 +180,8 @@ class OAK:
         #     self.camRgb.isp.link(self.manip.inputImage)
         #     self.strName1 = "manip"
         # else:
-        #     self.camRgb.isp.link(self.xoutIsp.input)
-        #     self.strName1 = "isp"
+        # self.camRgb.isp.link(self.xoutIsp.input)
+        # self.strName1 = "isp"
 
         # self.xoutIsp.setStreamName(self.strName1)
         # self.stereo.depth.link(self.xoutStereoDepth.input)
@@ -194,7 +194,7 @@ class OAK:
     def displayDebug(self, device):
         # ispQueue = device.getOutputQueue(name=self.strName1, maxSize=4, blocking=False)
         # isp = ispQueue.get()
-        # ispFrame = isp.getCvFrame()
+        # self.ispFrame = isp.getCvFrame()
 
         # xScale = self.monoWidth / self.inputSize[0]
         # yScale = self.monoHeight / self.inputSize[1]
@@ -217,7 +217,7 @@ class OAK:
 
         # r = cv2.resize(ispFrame, dim)
         # s = r[ymin:ymax, xmin:xmax]
-        # cv2.imshow(self.strName1, s)
+        # cv2.imshow(self.strName1, self.ispFrame)
 
         # ispQstereoDepthQueue = device.getOutputQueue(name="stereo-depth", maxSize=4, blocking=False)
         # dpt = ispQstereoDepthQueue.get()
@@ -245,6 +245,7 @@ class OAK:
         self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
         self.xoutNN = self.pipeline.create(dai.node.XLinkOut)
         self.xoutDepth = self.pipeline.create(dai.node.XLinkOut)
+        self.xoutIsp = self.pipeline.create(dai.node.XLinkOut)
 
         self.xoutRgb.setStreamName("rgb")
         self.xoutNN.setStreamName("detections")
@@ -257,6 +258,9 @@ class OAK:
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         self.camRgb.setFps(self.CAMERA_FPS)
+        self.ispScale = (2,3)
+        self.camRgb.setIspScale(self.ispScale[0], self.ispScale[1])
+
         print("Camera FPS: {}".format(self.camRgb.getFps()))
 
         # For now, RGB needs fixed focus to properly align with depth.
@@ -298,6 +302,9 @@ class OAK:
         self.stereo.depth.link(spatialDetectionNetwork.inputDepth)
         spatialDetectionNetwork.passthroughDepth.link(self.xoutDepth.input)
 
+        self.camRgb.isp.link(self.xoutIsp.input)
+        self.xoutIsp.setStreamName("isp")
+
         # Extra for debugging
 
         self.buildDebugPipeline()
@@ -321,6 +328,7 @@ class OAK:
             previewQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
             detectionNNQueue = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
             depthQueue = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+            ispQueue = device.getOutputQueue(name="isp", maxSize=4, blocking=False)
 
             startTime = time.monotonic()
             counter = 0
@@ -333,6 +341,7 @@ class OAK:
                 self.inPreview = previewQueue.get()
                 self.inDet = detectionNNQueue.get()
                 self.depth = depthQueue.get()
+                self.isp = ispQueue.get()
 
                 counter += 1
                 current_time = time.monotonic()
@@ -343,6 +352,7 @@ class OAK:
 
                 self.frame = self.inPreview.getCvFrame()
                 self.depthFrame = self.depth.getFrame()
+                self.ispFrame = self.isp.getCvFrame()
 
                 self.depthFrameColor = cv2.normalize(self.depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
                 self.depthFrameColor = cv2.equalizeHist(self.depthFrameColor)
@@ -357,7 +367,7 @@ class OAK:
                     objects = []
 
                 if processImages is not None:
-                    additionalObjects = processImages(self.frame, self.depthFrame, self.depthFrameColor)
+                    additionalObjects = processImages(self.ispFrame, self.depthFrame, self.depthFrameColor)
                     if additionalObjects is not None:
                         objects = objects + additionalObjects
 
@@ -367,7 +377,7 @@ class OAK:
                 self.displayDebug(device)
 
                 if displayResults is not None:
-                    if displayResults(self.frame, self.depthFrameColor) == False:
+                    if displayResults(self.ispFrame, self.depthFrameColor, self.frame) == False:
                         return
 
 

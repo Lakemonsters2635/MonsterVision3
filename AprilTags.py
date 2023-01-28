@@ -10,8 +10,8 @@ class AprilTags:
     monoFOV = np.deg2rad(72)
     tanHalfHFOV = math.tan(monoFOV / 2.0)
 
-    penucheFactorM = 0.803
-    penucheFactorB = 5.42 * 25.4
+    penucheFactorM = 0.785
+    penucheFactorB = 10 * 25.4
 
     def calc_tan_angle(self, offset, depthWidth):
         return offset * self.tanHalfHFOV / depthWidth
@@ -114,8 +114,13 @@ class AprilTags:
 
         objects = []
 
+        # if len(results) > 4:
+        #     i = 0
+
         # loop over the AprilTag detection results
         for r in results:
+            if r.hamming != 0:
+                continue
             # extract the bounding box (x, y)-coordinates for the AprilTag
             # and convert each of the (x, y)-coordinate pairs to integers
             (ptA, ptB, ptC, ptD) = r.corners

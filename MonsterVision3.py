@@ -22,8 +22,8 @@ def processDetections(oak, detections):
 def objectsCallback(objects):
     frc.writeObjectsToNetworkTable(json.dumps(objects))
 
-def displayResults(frame, depthFrameColor):
-    return frc.displayResults(frame, depthFrameColor)
+def displayResults(fullFrame, depthFrameColor, detectionFrame):
+    return frc.displayResults(fullFrame, depthFrameColor, detectionFrame)
 
 
 frc = FRC.FRC()
