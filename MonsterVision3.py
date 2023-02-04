@@ -5,16 +5,20 @@ import FRC
 import AprilTags
 import cv2
 import importlib
+import Contours
 
+# OAK = importlib.import_module("Gripper")            # Allows substitution of other pilelines!
 OAK = importlib.import_module("MV3")            # Allows substitution of other pilelines!
 
 PREVIEW_WIDTH = 200
 PREVIEW_HEIGHT = 200
 
 aprilTags = AprilTags.AprilTags("tag16h5")  
+contours = Contours.Contours()
 
-def processApriltags(imageFrame, depthFrame, depthFrameColor):
-    return aprilTags.detect(imageFrame, depthFrame, depthFrameColor)
+def processExtra(imageFrame, depthFrame, depthFrameColor):
+    objects = contours.detect(imageFrame, depthFrame, depthFrameColor)
+    return objects.extend(aprilTags.detect(imageFrame, depthFrame, depthFrameColor))
 
 def processDetections(oak, detections):
     return oak.processDetections(detections)
@@ -36,4 +40,4 @@ spatialDetectionNetwork = oak.setupSDN(nnConfig)
 oak.buildPipeline(spatialDetectionNetwork)
 
 
-oak.runPipeline(processDetections, objectsCallback, displayResults, processApriltags)
+oak.runPipeline(processDetections, objectsCallback, displayResults, processExtra)

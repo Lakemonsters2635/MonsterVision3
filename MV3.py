@@ -6,6 +6,8 @@ import time
 import depthai as dai
 import cv2
 
+import notinh
+
 INCHES_PER_MILLIMETER = 39.37 / 1000
 
 # Weights to use when blending depth/rgb image (should equal 1.0)

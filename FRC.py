@@ -132,11 +132,12 @@ class FRC:
 
     def displayResults(self, fullFrame, depthFrameColor, detectionFrame):
         if self.hasDisplay:
-            cv2.imshow("depth", depthFrameColor)
-            cv2.imshow("detections", detectionFrame)
-            cv2.imshow("tags", fullFrame)
-            # blended = cv2.addWeighted(frame, 0.4, depthFrameColor, 0.6, 0)
-            # cv2.imshow("blended", blended)
+            if depthFrameColor is not None:
+                cv2.imshow("depth", depthFrameColor)
+            if detectionFrame is not None:
+                cv2.imshow("detections", detectionFrame)
+            if fullFrame is not None:
+                cv2.imshow("tags", fullFrame)
 
         if cscoreAvailable:
             if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:

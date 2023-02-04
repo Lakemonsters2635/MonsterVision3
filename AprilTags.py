@@ -32,7 +32,11 @@ class AprilTags:
 
     # Calculate spatial coordinates from depth map and bounding box (ROI)
 
-    def calc_spatials(self, bbox, centroidX, centroidY, depth, inputShape, averaging_method=np.median):
+    def calc_spatials(self, bbox, centroidX, centroidY, depth, averaging_method=np.median):
+        if depth is None:
+            return (centroidX, centroidY, 0)
+        
+        inputShape = depth.shape[0]
         xmin, ymin, xmax, ymax = bbox
         if xmin > xmax:  # bbox flipped
             xmin, xmax = xmax, xmin
@@ -91,31 +95,29 @@ class AprilTags:
 
 
     def detect(self, imageFrame, depthFrame, depthFrameColor):
-        xScale = depthFrame.shape[1] / imageFrame.shape[1]
-        yScale = depthFrame.shape[0] / imageFrame.shape[0]
-
-        if xScale > yScale:
-            dim = (int(imageFrame.shape[0]*depthFrame.shape[1]/depthFrame.shape[0]), int(imageFrame.shape[0]))
-            self.xMin = int((dim[0] - imageFrame.shape[1])/2)
-            # self.xMax = int(dim[0] - xmin)
-            self.yMin = 0
-            self.yMax = imageFrame.shape[0]
-            self.Scale = yScale
-        else:
-            dim = (int(imageFrame.shape[1]), int(imageFrame.shape[1]*depthFrame.shape[0]/depthFrame.shape[1]))
-            self.yMin = int((dim[1] - imageFrame.shape[0])/2)
-            # self.yMax = int(dim[1] - ymin)
-            self.xMin = 0
-            self.xMax = imageFrame.shape[1]
-            self.Scale = xScale
-
         gray = cv2.cvtColor(imageFrame, cv2.COLOR_BGR2GRAY)
         results = self.detector.detect(gray)
 
         objects = []
 
-        # if len(results) > 4:
-        #     i = 0
+        if depthFrame is not None:
+            xScale = depthFrame.shape[1] / imageFrame.shape[1]
+            yScale = depthFrame.shape[0] / imageFrame.shape[0]
+
+            if xScale > yScale:
+                dim = (int(imageFrame.shape[0]*depthFrame.shape[1]/depthFrame.shape[0]), int(imageFrame.shape[0]))
+                self.xMin = int((dim[0] - imageFrame.shape[1])/2)
+                # self.xMax = int(dim[0] - xmin)
+                self.yMin = 0
+                self.yMax = imageFrame.shape[0]
+                self.Scale = yScale
+            else:
+                dim = (int(imageFrame.shape[1]), int(imageFrame.shape[1]*depthFrame.shape[0]/depthFrame.shape[1]))
+                self.yMin = int((dim[1] - imageFrame.shape[0])/2)
+                # self.yMax = int(dim[1] - ymin)
+                self.xMin = 0
+                self.xMax = imageFrame.shape[1]
+                self.Scale = xScale
 
         # loop over the AprilTag detection results
         for r in results:
@@ -129,17 +131,24 @@ class AprilTags:
             ptD = (int(ptD[0]), int(ptD[1]))
             ptA = (int(ptA[0]), int(ptA[1]))
             (cX, cY) = (int(r.center[0]), int(r.center[1]))
-            res = self.calc_spatials((ptA[0], ptA[1], ptC[0], ptC[1]), cX, cY, depthFrame, depthFrame.shape[0])
+            res = self.calc_spatials((ptA[0], ptA[1], ptC[0], ptC[1]), cX, cY, depthFrame)
             if res == None:
                 continue
             (atX, atY, atZ) = res
-            atX = round((atX * INCHES_PER_MILLIMETER), 1)
-            atY = round((atY * INCHES_PER_MILLIMETER), 1)
-            atZ = round((atZ * INCHES_PER_MILLIMETER), 1)
+            if depthFrame is None:
+                atX = atX / imageFrame.shape[1] - 0.5
+                atY = atY / imageFrame.shape[0] - 0.5
+                units = ""
+            else:
+                atX = round((atX * INCHES_PER_MILLIMETER), 1)
+                atY = round((atY * INCHES_PER_MILLIMETER), 1)
+                atZ = round((atZ * INCHES_PER_MILLIMETER), 1)
+                units = "in"
 
             # draw the bounding box of the AprilTag detection
             self.drawBoundingBox(imageFrame, ptA, ptB, ptC, ptD, (0, 255, 0), 2)
-            self.drawBoundingBox(depthFrameColor, self.mapCoords(ptA), self.mapCoords(ptB), self.mapCoords(ptC), self.mapCoords(ptD), (0, 0, 0), 4)
+            if depthFrameColor is not None:
+                self.drawBoundingBox(depthFrameColor, self.mapCoords(ptA), self.mapCoords(ptB), self.mapCoords(ptC), self.mapCoords(ptD), (0, 0, 0), 4)
             # self.drawBoundingBox(depthFrameColor, ptA, ptB, ptC, ptD, (255, 0, 255), 2)
 
             # draw the center (x, y)-coordinates of the AprilTag
@@ -153,9 +162,9 @@ class AprilTags:
             tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
             color = (255, 0, 0)
             cv2.putText(imageFrame, tagID, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"X: {atX} in", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"Y: {atY} in", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"Z: {atZ} in", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
             objects.append({"objectLabel": tagID, "x": atX, "y": atY, "z": atZ})
 
