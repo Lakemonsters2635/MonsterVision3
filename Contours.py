@@ -1,3 +1,4 @@
+import time
 import cv2
 import numpy
 import math
@@ -13,58 +14,107 @@ class Contours:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__blur_type = BlurType.Gaussian_Blur
+        self.__blur_type = BlurType.Median_Filter
+        # self.__blur_type = BlurType.Gaussian_Blur
         self.__blur_radius = 1.7809910068770947
 
         self.blur_output = None
 
-        self.__hsv_threshold_input = self.blur_output
-        self.__hsv_threshold_hue = [14, 47]
-        self.__hsv_threshold_saturation = [113, 248]
-        self.__hsv_threshold_value = [128, 288]
+        self.__cone_hsv_threshold_input = self.blur_output
+        self.__cone_hsv_threshold_hue = [16, 33]
+        self.__cone_hsv_threshold_saturation = [167, 255]
+        self.__cone_hsv_threshold_value = [0, 255]
 
-        self.hsv_threshold_output = None
+        self.cone_hsv_threshold_output = None
 
-        self.__find_contours_input = self.hsv_threshold_output
-        self.__find_contours_external_only = True
+        self.__cube_hsv_threshold_input = self.blur_output
+        self.__cube_hsv_threshold_hue = [117, 143]
+        self.__cube_hsv_threshold_saturation = [94, 220]
+        self.__cube_hsv_threshold_value = [110, 255]
 
-        self.find_contours_output = None
+        self.cube_hsv_threshold_output = None
 
-        self.__convex_hulls_contours = None
+        self.__cone_find_contours_input = self.cone_hsv_threshold_output
+        self.__cone_find_contours_external_only = True
 
-        self.__circles_min_radius = 100
+        self.cone_find_contours_output = None
+
+        self.__cube_find_contours_input = self.cube_hsv_threshold_output
+        self.__cube_find_contours_external_only = True
+
+        self.cube_find_contours_output = None
+
+
+        self.__circles_min_radius = 0.1
 
 
     def process(self, source0):
         """
         Runs the pipeline and sets all outputs to new values.
         """
-        # Step Blur0:
-        self.__blur_input = source0
-        (self.blur_output) = self.__blur(self.__blur_input, self.__blur_type, self.__blur_radius)
+        self.startTime = time.monotonic_ns()
+        
+        # # Step Blur0:
+        # self.__blur_input = source0
+        # (self.blur_output) = self.__blur(self.__blur_input, self.__blur_type, self.__blur_radius)
+        (self.blur_output) = source0
+
+        self.blurTime = time.monotonic_ns()
 
         # Step HSV_Threshold0:
-        self.__hsv_threshold_input = self.blur_output
-        (self.hsv_threshold_output) = self.__hsv_threshold(self.__hsv_threshold_input, self.__hsv_threshold_hue, self.__hsv_threshold_saturation, self.__hsv_threshold_value)
-        cv2.imshow("threshold", self.hsv_threshold_output)
+        self.__cone_hsv_threshold_input = self.blur_output
+        (self.cone_hsv_threshold_output) = self.__hsv_threshold(self.__cone_hsv_threshold_input, self.__cone_hsv_threshold_hue, self.__cone_hsv_threshold_saturation, self.__cone_hsv_threshold_value)
+        # cv2.imshow("threshold0", self.cone_hsv_threshold_output)
+
+        self.hsvConeTime = time.monotonic_ns()
+
+        # Step HSV_Threshold1:
+        self.__cube_hsv_threshold_input = self.blur_output
+        (self.cube_hsv_threshold_output) = self.__hsv_threshold(self.__cube_hsv_threshold_input, self.__cube_hsv_threshold_hue, self.__cube_hsv_threshold_saturation, self.__cube_hsv_threshold_value)
+        # cv2.imshow("threshold1", self.cube_hsv_threshold_output)
+
+        self.hsvCubeTime = time.monotonic_ns()
 
         # Step Find_Contours0:
-        self.__find_contours_input = self.hsv_threshold_output
-        (self.find_contours_output) = self.__find_contours(self.__find_contours_input, self.__find_contours_external_only)
+        self.__cone_find_contours_input = self.cone_hsv_threshold_output
+        (self.cone_find_contours_output) = self.__find_contours(self.__cone_find_contours_input, self.__cone_find_contours_external_only)
+
+        self.contourConeTime = time.monotonic_ns()
+
+        # Step Find_Contours1:
+        self.__cube_find_contours_input = self.cube_hsv_threshold_output
+        (self.cube_find_contours_output) = self.__find_contours(self.__cube_find_contours_input, self.__cube_find_contours_external_only)
+
+        self.contourCubeTime = time.monotonic_ns()
 
         # Approximate contours to polygons + get bounding rects and circles
 
-        contours_poly = [None]*len(self.find_contours_output)
-        boundRects = [None]*len(self.find_contours_output)
-        centers = [None]*len(self.find_contours_output)
-        radii = [None]*len(self.find_contours_output)
-        for i, c in enumerate(self.find_contours_output):
-            contours_poly[i] = cv2.approxPolyDP(c, 3, True)
-            boundRects[i] = cv2.boundingRect(contours_poly[i])
-            centers[i], radii[i] = cv2.minEnclosingCircle(contours_poly[i])
+        cone_contours_poly = [None]*len(self.cone_find_contours_output)
+        cone_boundRects = [None]*len(self.cone_find_contours_output)
+        cone_centers = [None]*len(self.cone_find_contours_output)
+        cone_radii = [None]*len(self.cone_find_contours_output)
+        for i, c in enumerate(self.cone_find_contours_output):
+            cone_contours_poly[i] = cv2.approxPolyDP(c, 3, True)
+            cone_boundRects[i] = cv2.boundingRect(cone_contours_poly[i])
+            cone_centers[i], cone_radii[i] = cv2.minEnclosingCircle(cone_contours_poly[i])
 
-        return (self.find_contours_output, boundRects, centers, radii)
+        self.circleConeTime = time.monotonic_ns()
 
+        cube_contours_poly = [None]*len(self.cube_find_contours_output)
+        cube_boundRects = [None]*len(self.cube_find_contours_output)
+        cube_centers = [None]*len(self.cube_find_contours_output)
+        cube_radii = [None]*len(self.cube_find_contours_output)
+        for i, c in enumerate(self.cube_find_contours_output):
+            cube_contours_poly[i] = cv2.approxPolyDP(c, 3, True)
+            cube_boundRects[i] = cv2.boundingRect(cube_contours_poly[i])
+            cube_centers[i], cube_radii[i] = cv2.minEnclosingCircle(cube_contours_poly[i])
+
+        self.circleCubeTime = time.monotonic_ns()
+
+        return (
+            (self.cone_find_contours_output, cone_boundRects, cone_centers, cone_radii),
+            (self.cube_find_contours_output, cube_boundRects, cube_centers, cube_radii)
+        )
 
 
     @staticmethod
@@ -123,28 +173,48 @@ class Contours:
         return contours
     
 
-    def detect(self, imageFrame, depthFrame, depthFrameColor):
-        (contours, boundRects, centers, radii) = self.process(imageFrame)
+    def __processDetections(self, imageFrame, d, type):
         objects = []
+        (contours, boundRects, centers, radii) = d
         for i, c in enumerate(centers):
-            if radii[i] < self.__circles_min_radius:
+            r = radii[i]/imageFrame.shape[1]
+            if r < self.__circles_min_radius:
                 continue
 
-            # draw the center (x, y)-coordinates of the AprilTag
+            # draw the center (x, y)-coordinates of the detection
             (cX, cY) = (int(c[0]), int(c[1]))
             cv2.circle(imageFrame, (cX, cY), 5, (0, 0, 255), -1)
             cv2.circle(imageFrame, (cX, cY), int(radii[i]), (255, 0, 0), 2)
-            # # draw the tag family on the image
-            # tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
-            # color = (255, 0, 0)
-            # cv2.putText(imageFrame, tagID, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            # cv2.putText(imageFrame, f"X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            # cv2.putText(imageFrame, f"Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            # cv2.putText(imageFrame, f"Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
-            objects.append({"objectLabel": f"blob{i}", "x": c[0], "y": c[1], "r": radii[i]}) 
+            lblX = int(cX)
+            lblY = int(cY)
+            color = (255, 0, 0)
+
+            # draw the location text
+            cv2.putText(imageFrame, type, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"X: {round(c[0]/imageFrame.shape[1], 3)}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"Y: {round(c[1]/imageFrame.shape[0], 3)}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"R: {round(r, 3)}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+            objects.append({"objectLabel": f"{type}", "x": c[0]/imageFrame.shape[1], "y": c[1]/imageFrame.shape[0], "r": radii[i]/imageFrame.shape[1]}) 
         return objects
-    
+
+
+    def detect(self, imageFrame, depthFrame, depthFrameColor):
+        detections = self.process(imageFrame)
+        # blurTime = self.blurTime - self.startTime
+        # hsvConeTime = self.hsvConeTime - self.blurTime
+        # hsvCubeTime = self.hsvCubeTime - self.hsvConeTime
+        # contourConeTime = self.contourConeTime - self.hsvCubeTime
+        # contourCubeTime = self.contourCubeTime - self.contourConeTime
+        # circleConeTime = self.circleConeTime - self.contourCubeTime
+        # circleCubeTime = self.circleCubeTime - self.circleConeTime
+
+        # print(f"Blur:\t\t{blurTime}\nhsvCone:\t{hsvConeTime}\nhsvCube:\t{hsvCubeTime}\ncontourCone:\t{contourConeTime}\ncontourCube:\t{contourCubeTime}\ncircleCone:\t{circleConeTime}\ncircleCube:\t{circleCubeTime}")
+        objects = self.__processDetections(imageFrame, detections[0], "cone")
+        objects = objects.extend(self.__processDetections(imageFrame, detections[1], "cube"))
+
+        return [] if objects is None else objects
 
 BlurType = Enum('BlurType', 'Box_Blur Gaussian_Blur Median_Filter Bilateral_Filter')
 

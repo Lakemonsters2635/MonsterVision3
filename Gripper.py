@@ -39,6 +39,7 @@ class OAK:
     rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
     rgbWidth = 1920
     rgbHeight = 1080
+    ispScale = (1, 6)
 
     bbfraction = 0.2
 
@@ -178,7 +179,6 @@ class OAK:
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         self.camRgb.setFps(self.CAMERA_FPS)
-        self.ispScale = (2,3)
         self.camRgb.setIspScale(self.ispScale[0], self.ispScale[1])
 
         print("Camera FPS: {}".format(self.camRgb.getFps()))
@@ -204,7 +204,7 @@ class OAK:
 
 
 
-    def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None):
+    def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None, cam="", imagesParam=None):
         # Connect to device and start pipeline
         with dai.Device(self.pipeline) as device:
 
@@ -217,6 +217,8 @@ class OAK:
 
             while True:
                 self.inRgb = rgbQueue.get()
+                self.frame = self.inRgb.getCvFrame()
+
                 counter += 1
                 current_time = time.monotonic()
                 if (current_time - startTime) > 1:
@@ -224,22 +226,20 @@ class OAK:
                     counter = 0
                     startTime = current_time
 
-                self.frame = self.inRgb.getCvFrame()
-
                 objects = []
 
                 if processImages is not None:
-                    additionalObjects = processImages(self.frame, None, None)
+                    additionalObjects = processImages(self.frame, None, None, imagesParam)
                     if additionalObjects is not None:
                         objects = objects + additionalObjects
 
                 if objectsCallback is not None:
-                    objectsCallback(objects)
+                    objectsCallback(objects, cam)
 
                 self.displayDebug(device)
 
                 if displayResults is not None:
-                    if displayResults(self.frame, None, None) == False:
+                    if displayResults(self.frame, None, None, cam) == False:
                         return
 
 

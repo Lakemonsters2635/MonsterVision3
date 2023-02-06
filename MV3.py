@@ -6,13 +6,14 @@ import time
 import depthai as dai
 import cv2
 
-import notinh
 
 INCHES_PER_MILLIMETER = 39.37 / 1000
 
 # Weights to use when blending depth/rgb image (should equal 1.0)
 rgbWeight = 0.4
 depthWeight = 0.6
+
+scaleFactor = 4             # reduce ISP and Depth by a factor of this
 
 
 def updateBlendWeights(percent_rgb):
@@ -244,6 +245,10 @@ class OAK:
         self.monoRight = self.pipeline.create(dai.node.MonoCamera)
         self.stereo = self.pipeline.create(dai.node.StereoDepth)
 
+        if scaleFactor != 1:
+            self.ispScaleNode = self.pipeline.create(dai.node.ImageManip)
+            self.depthScaleNode = self.pipeline.create(dai.node.ImageManip)
+
         self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
         self.xoutNN = self.pipeline.create(dai.node.XLinkOut)
         self.xoutDepth = self.pipeline.create(dai.node.XLinkOut)
@@ -288,6 +293,13 @@ class OAK:
         self.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
         self.stereo.setOutputSize(self.monoLeft.getResolutionWidth(), self.monoLeft.getResolutionHeight())
 
+        if scaleFactor != 1:
+            w = self.monoLeft.getResolutionWidth()
+            h = self.monoLeft.getResolutionHeight()
+
+            self.ispScaleNode.setResize(int(w/scaleFactor), int(h/scaleFactor))
+            self.depthScaleNode.setResize(int(w/scaleFactor), int(h/scaleFactor))
+
         # Linking
 
         self.monoLeft.out.link(self.stereo.left)
@@ -302,9 +314,17 @@ class OAK:
         spatialDetectionNetwork.out.link(self.xoutNN.input)
 
         self.stereo.depth.link(spatialDetectionNetwork.inputDepth)
-        spatialDetectionNetwork.passthroughDepth.link(self.xoutDepth.input)
 
-        self.camRgb.isp.link(self.xoutIsp.input)
+
+        if scaleFactor == 1:
+            spatialDetectionNetwork.passthroughDepth.link(self.xoutDepth.input)
+            self.camRgb.isp.link(self.xoutIsp.input)
+        else:
+            self.camRgb.isp.link(self.ispScaleNode.inputImage)
+            self.ispScaleNode.out.link(self.xoutIsp.input)
+            spatialDetectionNetwork.passthroughDepth.link(self.depthScaleNode.inputImage)
+            self.depthScaleNode.out.link(self.xoutDepth.input)
+
         self.xoutIsp.setStreamName("isp")
 
         # Extra for debugging
@@ -313,7 +333,7 @@ class OAK:
 
 
 
-    def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None):
+    def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None, cam="", imagesParam=None):
         # Connect to device and start pipeline
         with dai.Device(self.pipeline) as device:
         # For now, RGB needs fixed focus to properly align with depth.
@@ -369,17 +389,17 @@ class OAK:
                     objects = []
 
                 if processImages is not None:
-                    additionalObjects = processImages(self.ispFrame, self.depthFrame, self.depthFrameColor)
+                    additionalObjects = processImages(self.ispFrame, self.depthFrame, self.depthFrameColor, imagesParam)
                     if additionalObjects is not None:
                         objects = objects + additionalObjects
 
                 if objectsCallback is not None:
-                    objectsCallback(objects)
+                    objectsCallback(objects, cam)
 
                 self.displayDebug(device)
 
                 if displayResults is not None:
-                    if displayResults(self.ispFrame, self.depthFrameColor, self.frame) == False:
+                    if displayResults(self.ispFrame, self.depthFrameColor, self.frame, cam) == False:
                         return
 
 

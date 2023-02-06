@@ -1,5 +1,6 @@
 import json
 import sys
+import time
 from networktables import NetworkTables
 from networktables import NetworkTablesInstance
 import cv2
@@ -26,6 +27,7 @@ class FRC:
     sd = None
     frame_counter = 0
     LaserDotProjectorCurrent = 0
+    lastTime = 0
 
     # cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     
@@ -126,20 +128,30 @@ class FRC:
 
     
     
-    def writeObjectsToNetworkTable(self, jsonObjects):
-        self.sd.putString("ObjectTracker", jsonObjects)
+    def writeObjectsToNetworkTable(self, jsonObjects, cam):
+        self.sd.putString("ObjectTracker-" + cam, jsonObjects)
         self.ntinst.flush()
 
-    def displayResults(self, fullFrame, depthFrameColor, detectionFrame):
+    def displayResults(self, fullFrame, depthFrameColor, detectionFrame, cam):
         if self.hasDisplay:
+            now = time.monotonic_ns()
+            fps = 1000000000.0 / (now - self.lastTime)
+            self.lastTime = now
+            cv2.putText(fullFrame, "NN fps: {:.2f}".format(fps), (2, fullFrame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
+            (255, 255, 255))
+
             if depthFrameColor is not None:
-                cv2.imshow("depth", depthFrameColor)
+                cv2.imshow("depth " + cam, depthFrameColor)
             if detectionFrame is not None:
-                cv2.imshow("detections", detectionFrame)
+                cv2.imshow("detections " + cam, detectionFrame)
             if fullFrame is not None:
-                cv2.imshow("tags", fullFrame)
+                cv2.imshow("openCV " + cam, fullFrame)
 
         if cscoreAvailable:
+            if cam == "Gripper":
+                self.gripperImage = fullFrame
+            else:
+                self.detectionsImage = detectionFrame
             if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:
                 self.output.putFrame(detectionFrame)
 

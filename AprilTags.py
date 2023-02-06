@@ -168,6 +168,7 @@ class AprilTags:
 
             objects.append({"objectLabel": tagID, "x": atX, "y": atY, "z": atZ})
 
+        # cv2.imshow("dbg", imageFrame)
         return objects
 
 
