@@ -39,28 +39,27 @@ def _average_depth_coord(pt1, pt2, padding_factor):
 
 
 class OAK:
-    LaserDotProjectorCurrent = 0
-
-    monoResolution = dai.MonoCameraProperties.SensorResolution.THE_720_P
-    monoWidth = 1280
-    monoHeight = 720
-
-    rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
-    rgbWidth = 1920
-    rgbHeight = 1080
-
-    bbfraction = 0.2
-
-    CAMERA_FPS = 25
-    DESIRED_FPS = 10		# seem to actually get 1/2 this.  Don't know why.....
-    PREVIEW_WIDTH = 200
-    PREVIEW_HEIGHT = 200
-
-    syncNN = True
 
     def __init__(self, devInfo : dai.DeviceInfo, LaserDotProjectorCurrent=None):
         self.LaserDotProjectorCurrent = LaserDotProjectorCurrent
         self.devInfo = devInfo
+
+        self.monoResolution = dai.MonoCameraProperties.SensorResolution.THE_720_P
+        self.monoWidth = 1280
+        self.monoHeight = 720
+
+        self.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+        self.rgbWidth = 1920
+        self.rgbHeight = 1080
+
+        self.bbfraction = 0.2
+
+        self.CAMERA_FPS = 25
+        self.DESIRED_FPS = 10		# seem to actually get 1/2 this.  Don't know why.....
+        self.PREVIEW_WIDTH = 200
+        self.PREVIEW_HEIGHT = 200
+
+        self.syncNN = True
 
 
     NN_FILE = "/boot/nn.json"
@@ -393,7 +392,7 @@ class OAK:
                     objects = []
 
                 if processImages is not None:
-                    additionalObjects = processImages(self.ispFrame, self.depthFrame, self.depthFrameColor, imagesParam)
+                    additionalObjects = processImages(self.ispFrame, self.depthFrame, self.depthFrameColor, self.frame, imagesParam)
                     if additionalObjects is not None:
                         objects = objects + additionalObjects
 
@@ -429,7 +428,7 @@ class OAK:
 
             cv2.rectangle(self.depthFrameColor, (xmin, ymin), (xmax, ymax), 255, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
-            # Denormalize bounding box
+            # Denormalize bounding box.  Coordinates in pixels on "detections" frame
 
             x1 = int(detection.xmin * width)
             x2 = int(detection.xmax * width)

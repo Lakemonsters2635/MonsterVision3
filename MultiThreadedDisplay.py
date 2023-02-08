@@ -1,13 +1,11 @@
 import cv2
 import queue
-import threading
 
-
-# NOTE: This class should only be used as a singleton
 
 class MTD:
-    Q = queue.Queue()
-    allDone = False
+    def __init__(self):
+        self.Q = queue.Queue()
+        self.allDone = False
 
     def enqueueImage(self, window : str, image):
         self.Q.put((window, image))
@@ -29,7 +27,3 @@ class MTD:
     def areWeDone(self):
         return self.allDone
 
-
-    # def __init__(self):
-    #     thread = threading.Thread(target=displayLoopStatic, args=(self, ))
-    #     thread.start()

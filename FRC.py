@@ -5,6 +5,7 @@ from networktables import NetworkTables
 from networktables import NetworkTablesInstance
 import cv2
 import MultiThreadedDisplay as MTD
+import threading
 
 cscoreAvailable = True
 try:
@@ -17,20 +18,27 @@ DESIRED_FPS = 10		# seem to actually get 1/2 this.  Don't know why.....
 
 
 class FRC:
+  
     ROMI_FILE = "/boot/romi.json"
     FRC_FILE = "/boot/frc.json"
     NN_FILE = "/boot/nn.json"
 
-    team = 0
-    server = False
-    hasDisplay = False
-    ntinst = None
-    sd = None
-    frame_counter = 0
-    LaserDotProjectorCurrent = 0
-    lastTime = 0
 
-    mtd = MTD.MTD()
+    def __init__(self):
+        self.team = 0
+        self.server = False
+        self.hasDisplay = False
+        self.ntinst = None
+        self.sd = None
+        self.frame_counter = 0
+        self.LaserDotProjectorCurrent = 0
+        self.lastTime = 0
+
+        self.mtd = MTD.MTD()
+        self.lockNT = threading.Lock()
+
+        self.gripperImage = None
+        self.detectionsImage = None
 
     # cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     
@@ -132,8 +140,11 @@ class FRC:
     
     
     def writeObjectsToNetworkTable(self, jsonObjects, cam):
+        # Protect NT access with a lock.  Just in case NT implementation is not thread-safe
+        self.lockNT.acquire()
         self.sd.putString("ObjectTracker-" + cam, jsonObjects)
         self.ntinst.flush()
+        self.lockNT.release()
 
     def displayResults(self, fullFrame, depthFrameColor, detectionFrame, cam):
         if self.hasDisplay:
@@ -153,15 +164,18 @@ class FRC:
                 self.mtd.enqueueImage("openCV " + cam, fullFrame)
                 # cv2.imshow("openCV " + cam, fullFrame)
 
-        if cscoreAvailable:
-            if cam == "Gripper":
-                self.gripperImage = fullFrame
-            else:
-                self.detectionsImage = detectionFrame
-            if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:
-                self.output.putFrame(detectionFrame)
+        if cam == "Gripper":
+            self.gripperImage = fullFrame
+        else:
+            self.detectionsImage = detectionFrame
+        if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:
+            if self.gripperImage is not None and self.detectionsImage is not None:
+                img = cv2.vconcat([self.gripperImage, self.detectionsImage])
+                self.mtd.enqueueImage("DS View", img)
+                if cscoreAvailable:
+                        self.output.putFrame(img)
 
-            self.frame_counter += 1
+        self.frame_counter += 1
 
         # if self.hasDisplay and cv2.waitKey(1) == ord('q'):
         #     return False

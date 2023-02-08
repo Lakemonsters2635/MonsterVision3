@@ -200,7 +200,7 @@ class Contours:
         return objects
 
 
-    def detect(self, imageFrame, depthFrame, depthFrameColor):
+    def detect(self, imageFrame, depthFrame, depthFrameColor, frame):
         detections = self.process(imageFrame)
         # blurTime = self.blurTime - self.startTime
         # hsvConeTime = self.hsvConeTime - self.blurTime

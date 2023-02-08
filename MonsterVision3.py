@@ -12,11 +12,11 @@ import Contours
 import DAI
 import depthai as dai
 
-def processExtra1(imageFrame, depthFrame, depthFrameColor, contours):
-    return contours.detect(imageFrame, depthFrame, depthFrameColor)
+def processExtra1(imageFrame, depthFrame, depthFrameColor, drawingFrame, contours):
+    return contours.detect(imageFrame, depthFrame, depthFrameColor, drawingFrame)
 
-def processExtraD(imageFrame, depthFrame, depthFrameColor, aprilTags):
-    return aprilTags.detect(imageFrame, depthFrame, depthFrameColor)
+def processExtraD(imageFrame, depthFrame, depthFrameColor, drawingFrame, aprilTags):
+    return aprilTags.detect(imageFrame, depthFrame, depthFrameColor, drawingFrame)
 
 def processDetections(oak, detections):
     return oak.processDetections(detections)
