@@ -4,6 +4,7 @@ import time
 from networktables import NetworkTables
 from networktables import NetworkTablesInstance
 import cv2
+import MultiThreadedDisplay as MTD
 
 cscoreAvailable = True
 try:
@@ -28,6 +29,8 @@ class FRC:
     frame_counter = 0
     LaserDotProjectorCurrent = 0
     lastTime = 0
+
+    mtd = MTD.MTD()
 
     # cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     
@@ -141,11 +144,14 @@ class FRC:
             (255, 255, 255))
 
             if depthFrameColor is not None:
-                cv2.imshow("depth " + cam, depthFrameColor)
+                self.mtd.enqueueImage("depth " + cam, depthFrameColor)
+                # cv2.imshow("depth " + cam, depthFrameColor)
             if detectionFrame is not None:
-                cv2.imshow("detections " + cam, detectionFrame)
+                self.mtd.enqueueImage("detections " + cam, detectionFrame)
+                # cv2.imshow("detections " + cam, detectionFrame)
             if fullFrame is not None:
-                cv2.imshow("openCV " + cam, fullFrame)
+                self.mtd.enqueueImage("openCV " + cam, fullFrame)
+                # cv2.imshow("openCV " + cam, fullFrame)
 
         if cscoreAvailable:
             if cam == "Gripper":
@@ -157,8 +163,13 @@ class FRC:
 
             self.frame_counter += 1
 
-        if self.hasDisplay and cv2.waitKey(1) == ord('q'):
+        # if self.hasDisplay and cv2.waitKey(1) == ord('q'):
+        #     return False
+        if self.mtd.areWeDone():
             return False
         
         return True
 
+    def runDisplay(self):
+        self.mtd.displayLoop()
+        return

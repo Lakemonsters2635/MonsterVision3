@@ -58,8 +58,9 @@ class OAK:
 
     syncNN = True
 
-    def __init__(self, LaserDotProjectorCurrent=None):
+    def __init__(self, devInfo : dai.DeviceInfo, LaserDotProjectorCurrent=None):
         self.LaserDotProjectorCurrent = LaserDotProjectorCurrent
+        self.devInfo = devInfo
 
 
     NN_FILE = "/boot/nn.json"
@@ -68,6 +69,8 @@ class OAK:
     openvinoVersionMap = {}
     for v in openvinoVersions:
         openvinoVersionMap[dai.OpenVINO.getVersionName(v)] = v
+
+    openvinoVersionMap[""] = dai.OpenVINO.DEFAULT_VERSION
 
     def parse_error(self, mess):
         """Report parse error."""
@@ -274,7 +277,8 @@ class OAK:
         # This value was used during calibration
         
         try:
-            calibData = dai.Device().readCalibration2()
+            ovv = self.openvinoVersionMap[self.openvinoVersion]
+            calibData = dai.Device(ovv, self.devInfo, False).readCalibration2()
             lensPosition = calibData.getLensPosition(dai.CameraBoardSocket.RGB)
             if lensPosition:
                 self.camRgb.initialControl.setManualFocus(lensPosition)
@@ -335,7 +339,7 @@ class OAK:
 
     def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None, cam="", imagesParam=None):
         # Connect to device and start pipeline
-        with dai.Device(self.pipeline) as device:
+        with dai.Device(self.pipeline, self.devInfo) as device:
         # For now, RGB needs fixed focus to properly align with depth.
         # This value was used during calibration
             try:
@@ -344,7 +348,7 @@ class OAK:
                 if lensPosition:
                     self.camRgb.initialControl.setManualFocus(lensPosition)
             except:
-                raise
+                pass
 
             # Output queues will be used to get the rgb frames and nn data from the outputs defined above
             previewQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)

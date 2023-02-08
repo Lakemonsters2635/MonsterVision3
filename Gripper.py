@@ -50,7 +50,8 @@ class OAK:
 
     syncNN = True
 
-    def __init__(self, laserProjectorNotUsed=None):
+    def __init__(self, devInfo : dai.DeviceInfo, laserProjectorNotUsed=None):
+        self.devInfo = devInfo
         return
 
 
@@ -187,7 +188,8 @@ class OAK:
         # This value was used during calibration
         
         try:
-            calibData = dai.Device().readCalibration2()
+            ovv = self.openvinoVersionMap[self.openvinoVersion]
+            calibData = dai.Device(ovv, self.devInfo, False).readCalibration2()
             lensPosition = calibData.getLensPosition(dai.CameraBoardSocket.RGB)
             if lensPosition:
                 self.camRgb.initialControl.setManualFocus(lensPosition)
@@ -206,7 +208,7 @@ class OAK:
 
     def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None, cam="", imagesParam=None):
         # Connect to device and start pipeline
-        with dai.Device(self.pipeline) as device:
+        with dai.Device(self.pipeline, self.devInfo) as device:
 
             # Output queues will be used to get the rgb frames and nn data from the outputs defined above
             rgbQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)

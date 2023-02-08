@@ -16,13 +16,17 @@ class DAI:
             exit(-1)
 
 
-        for info in infos:
+        # for i, info in enumerate(infos):
+        # for i in range(1,-1,-1):
+        for i in range(0,2):
+            info = infos[i]
             # Converts enum eg. 'XLinkDeviceState.X_LINK_UNBOOTED' to 'UNBOOTED'
             state = str(info.state).split('X_LINK_')[1]
 
             print(f"Found device '{info.name}', MxId: '{info.mxid}', State: '{state}'")
-            with dai.Device(dai.Pipeline(), info) as device:
-                # print("Available camera sensors: ", device.getCameraSensorNames())
+            with dai.Device(dai.OpenVINO.DEFAULT_VERSION, info) as device:
+            # with dai.Device(dai.Pipeline(), info) as device:
+                print("Available camera sensors: ", device.getCameraSensorNames())
                 ccs = device.getConnectedCameras()
                 devices.append({ "cameras": len(ccs), "mxid": info.mxid})
 
