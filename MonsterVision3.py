@@ -31,10 +31,10 @@ def displayResults(fullFrame, depthFrameColor, detectionFrame, cam):
 
 
 
-def runOAK1(mxid, cam):
+def runOAK1(devInfo, cam):
     OAK = importlib.import_module("Gripper")            # Allows substitution of other pilelines!
     contours = Contours.Contours()
-    oak = OAK.OAK(None)
+    oak = OAK.OAK(devInfo, None)
     nnConfig = oak.read_nn_config()
 
     spatialDetectionNetwork = oak.setupSDN(nnConfig)
@@ -43,10 +43,10 @@ def runOAK1(mxid, cam):
     oak.runPipeline(processDetections, objectsCallback, displayResults, processExtra1, cam, contours)
     return
 
-def runOAKD(mxid, cam):
+def runOAKD(devInfo, cam):
     OAK = importlib.import_module("MV3")            # Allows substitution of other pilelines!
     aprilTags = AprilTags.AprilTags("tag16h5")  
-    oak = OAK.OAK(frc.LaserDotProjectorCurrent)
+    oak = OAK.OAK(devInfo, frc.LaserDotProjectorCurrent)
     nnConfig = oak.read_nn_config()
 
     spatialDetectionNetwork = oak.setupSDN(nnConfig)
@@ -82,35 +82,39 @@ OAK_1_MXID = None
 #         print(f'Found device {c["mxid"]} having {c["cameras"]}.  This is unusual.')
 
 infos = dai.DeviceBootloader.getAllAvailableDevices()
-OAK_D_MXID = "14442C105129C6D200"
+# OAK_D_MXID = "14442C105129C6D200"     # Original OAK-D at Michael's house
 OAK_1_MXID = "14442C10E1474FD000"
+OAK_D_MXID = '1944301001564D1300'       # OAK-D Pro
 
 def checkCam(infos, mxid):
     for i in infos:
-        if mxid == i.mxid: return True
-    return False
+        if mxid == i.mxid: return i
+    return None
 
-if not checkCam(infos, OAK_D_MXID): OAK_D_MXID = None
-if not checkCam(infos, OAK_1_MXID): OAK_1_MXID = None
-
+OAK_D_DEVINFO = checkCam(infos, OAK_D_MXID)
+OAK_1_DEVINFO = checkCam(infos, OAK_1_MXID)
 
 print("Using cameras:")
-if OAK_D_MXID is not None: print(f"{OAK_D_MXID} OAK-D")
-if OAK_1_MXID is not None: print(f"{OAK_1_MXID} OAK-1")
+if OAK_D_DEVINFO is not None: print(f"{OAK_D_MXID} OAK-D")
+if OAK_1_DEVINFO is not None: print(f"{OAK_1_MXID} OAK-1")
 
 thread1 = None
 threadD = None
 
 if OAK_1_MXID is not None:
-    thread1 = threading.Thread(target=runOAK1, args=(OAK_1_MXID, "Gripper", ))
+    thread1 = threading.Thread(target=runOAK1, args=(OAK_1_DEVINFO, "Gripper", ))
     thread1.start()
 
 if OAK_D_MXID is not None:
-    threadD = threading.Thread(target=runOAKD, args=(OAK_D_MXID, "Chassis", ))
+    threadD = threading.Thread(target=runOAKD, args=(OAK_D_DEVINFO, "Chassis", ))
     threadD.start()
 
+# Now call the display queue worker loop (must be run from main thread)
+# This should never return until the user types 'q' (if a windows are being used)
+
+frc.runDisplay()
+
 # Wait for both threads to complete (actually, should never happen!)
-# time.sleep(36000)
 if thread1 is not None: thread1.join()
 if threadD is not None: threadD.join(5)
 
