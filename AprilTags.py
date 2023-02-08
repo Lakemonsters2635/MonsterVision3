@@ -16,15 +16,13 @@ class AprilTags:
     def calc_tan_angle(self, offset, depthWidth):
         return offset * self.tanHalfHFOV / depthWidth
 
-
     def mapXCoord(self, Small):
-        return int((Small + self.xMin) * self.Scale)
-
+        return int(Small * self.Scale + self.xMin)
 
     def mapYCoord(self, Small):
-        return int((Small + self.yMin) * self.Scale)
+        return int(Small * self.Scale + self.yMin)
 
-    def mapCoords(self,pt):
+    def mapCoords(self, pt):
         return (self.mapXCoord(pt[0]), self.mapYCoord(pt[1]))
 
 
@@ -43,34 +41,21 @@ class AprilTags:
         if ymin > ymax:  # bbox flipped
             ymin, ymax = ymax, ymin
 
-        a = self.mapCoords((256, 256))            
-
-        xmin = self.mapXCoord(xmin)
-        xmax = self.mapXCoord(xmax)
-        ymin = self.mapYCoord(ymin)
-        ymax = self.mapYCoord(ymax)
-
         if xmin == xmax or ymin == ymax: # Box of size zero
             return None
 
         # Calculate the average depth in the ROI.
-        depthROI = depth[ymin:ymax, xmin:xmax]
+        depthROI = depth[ymin:ymax, xmin:xmax]        
         averageDepth = averaging_method(depthROI)
 
-        cX = self.mapXCoord(centroidX)
-        cY = self.mapYCoord(centroidY)
-        bb_x_pos = cX - int(depth.shape[1] / 2)
-        bb_y_pos = cY - int(depth.shape[0] / 2)
+        bb_x_pos = centroidX - int(depth.shape[1] / 2)
+        bb_y_pos = centroidY - int(depth.shape[0] / 2)
 
-        # angle_x = calc_angle(bb_x_pos, depthWidth)
-        # angle_y = calc_angle(bb_y_pos, depthWidth)
         tanAngle_x = self.calc_tan_angle(bb_x_pos, inputShape)
         tanAngle_y = self.calc_tan_angle(bb_y_pos, inputShape)
 
-        # z = averageDepth
-        # print(f"z: {averageDepth* 39.37 / 1000}")
         z = averageDepth * self.penucheFactorM + self.penucheFactorB
-        # print(f"modified z: {(averageDepth * self.penucheFactorM + self.penucheFactorB)* 39.37 / 1000}")
+
         x = z * tanAngle_x
         y = -z * tanAngle_y
 
@@ -94,30 +79,29 @@ class AprilTags:
 
 
 
-    def detect(self, imageFrame, depthFrame, depthFrameColor):
+    def detect(self, imageFrame, depthFrame, depthFrameColor, drawingFrame):
         gray = cv2.cvtColor(imageFrame, cv2.COLOR_BGR2GRAY)
         results = self.detector.detect(gray)
 
         objects = []
 
-        if depthFrame is not None:
-            xScale = depthFrame.shape[1] / imageFrame.shape[1]
-            yScale = depthFrame.shape[0] / imageFrame.shape[0]
+        if drawingFrame is not None:
+            dfw = drawingFrame.shape[1]
+            dfh = drawingFrame.shape[0]
+            ifw = imageFrame.shape[1]
+            ifh = imageFrame.shape[0]
 
-            if xScale > yScale:
-                dim = (int(imageFrame.shape[0]*depthFrame.shape[1]/depthFrame.shape[0]), int(imageFrame.shape[0]))
-                self.xMin = int((dim[0] - imageFrame.shape[1])/2)
-                # self.xMax = int(dim[0] - xmin)
-                self.yMin = 0
-                self.yMax = imageFrame.shape[0]
+            xScale = dfw / ifw
+            yScale = dfh / ifh
+
+            if xScale < yScale:
                 self.Scale = yScale
+                self.xMin = int(dfw/2 - ifw*self.Scale/2)
+                self.yMin = 0
             else:
-                dim = (int(imageFrame.shape[1]), int(imageFrame.shape[1]*depthFrame.shape[0]/depthFrame.shape[1]))
-                self.yMin = int((dim[1] - imageFrame.shape[0])/2)
-                # self.yMax = int(dim[1] - ymin)
-                self.xMin = 0
-                self.xMax = imageFrame.shape[1]
                 self.Scale = xScale
+                self.yMin = int(dfh/2 - ifh*self.Scale/2)
+                self.xMin = 0
 
         # loop over the AprilTag detection results
         for r in results:
@@ -147,13 +131,11 @@ class AprilTags:
 
             # draw the bounding box of the AprilTag detection
             self.drawBoundingBox(imageFrame, ptA, ptB, ptC, ptD, (0, 255, 0), 2)
-            if depthFrameColor is not None:
-                self.drawBoundingBox(depthFrameColor, self.mapCoords(ptA), self.mapCoords(ptB), self.mapCoords(ptC), self.mapCoords(ptD), (0, 0, 0), 4)
-            # self.drawBoundingBox(depthFrameColor, ptA, ptB, ptC, ptD, (255, 0, 255), 2)
 
             # draw the center (x, y)-coordinates of the AprilTag
             (cX, cY) = (int(r.center[0]), int(r.center[1]))
             cv2.circle(imageFrame, (cX, cY), 5, (0, 0, 255), -1)
+
             wd = abs(ptC[0] - ptA[0])
             ht = abs(ptC[1] - ptA[1])
             lblX = int(cX - wd/2)
@@ -165,6 +147,26 @@ class AprilTags:
             cv2.putText(imageFrame, f"X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.putText(imageFrame, f"Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.putText(imageFrame, f"Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+            if drawingFrame is not None:
+                aa = self.mapCoords(ptA)
+                bb = self.mapCoords(ptB)
+                cc = self.mapCoords(ptC)
+                dd = self.mapCoords(ptD)
+                ctr = self.mapCoords((cX, cY))
+                self.drawBoundingBox(drawingFrame, aa, bb, cc, dd, (0, 0, 0), 4)
+                cv2.circle(drawingFrame, ctr, 5, (0, 0, 255), -1)
+                wd = abs(cc[0] - aa[0])
+                ht = abs(cc[1] - aa[1])
+                lblX = int(ctr[0] - wd/2)
+                lblY = int(ctr[1] - ht/2)
+                # draw the tag family on the image
+                tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
+                color = (255, 0, 0)
+                cv2.putText(drawingFrame, tagID, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(drawingFrame, f"X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(drawingFrame, f"Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(drawingFrame, f"Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
             objects.append({"objectLabel": tagID, "x": atX, "y": atY, "z": atZ})
 
