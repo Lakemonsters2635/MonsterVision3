@@ -190,13 +190,18 @@ class Contours:
             lblY = int(cY)
             color = (255, 0, 0)
 
+            XX = round(c[0]/imageFrame.shape[1], 3)
+            YY = round(c[1]/imageFrame.shape[0], 3)
+            RR = round(r, 3)
+
             # draw the location text
             cv2.putText(imageFrame, type, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"X: {round(c[0]/imageFrame.shape[1], 3)}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"Y: {round(c[1]/imageFrame.shape[0], 3)}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"R: {round(r, 3)}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"X: {XX}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"Y: {YY}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f"R: {RR}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
-            objects.append({"objectLabel": f"{type}", "x": c[0]/imageFrame.shape[1], "y": c[1]/imageFrame.shape[0], "r": radii[i]/imageFrame.shape[1]}) 
+            obj = { "objectLabel": f"{type}", "x": XX, "y": YY, "r": round(radii[i]/imageFrame.shape[1], 3) }
+            objects.append(obj) 
         return objects
 
 
@@ -212,7 +217,8 @@ class Contours:
 
         # print(f"Blur:\t\t{blurTime}\nhsvCone:\t{hsvConeTime}\nhsvCube:\t{hsvCubeTime}\ncontourCone:\t{contourConeTime}\ncontourCube:\t{contourCubeTime}\ncircleCone:\t{circleConeTime}\ncircleCube:\t{circleCubeTime}")
         objects = self.__processDetections(imageFrame, detections[0], "cone")
-        objects = objects.extend(self.__processDetections(imageFrame, detections[1], "cube"))
+        cubes = self.__processDetections(imageFrame, detections[1], "cube")
+        objects.extend(cubes)
 
         return [] if objects is None else objects
 
