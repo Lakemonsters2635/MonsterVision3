@@ -394,7 +394,7 @@ class OAK:
                 if processImages is not None:
                     additionalObjects = processImages(self.ispFrame, self.depthFrame, self.depthFrameColor, self.frame, imagesParam)
                     if additionalObjects is not None:
-                        objects = objects + additionalObjects
+                        objects.extend(additionalObjects)
 
                 if objectsCallback is not None:
                     objectsCallback(objects, cam)
@@ -478,4 +478,5 @@ class OAK:
         cv2.putText(self.frame, "NN fps: {:.2f}".format(self.fps), (2, self.frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                     (255, 255, 255))
 
+        return objects
                 

@@ -1,9 +1,12 @@
+import random
 import apriltag
 import cv2
 import math
 import numpy as np
+import RANSAC
 
 INCHES_PER_MILLIMETER = 39.37 / 1000
+RANSAC_SCALING_FACTOR = 10.0 / 6.0              # Size of AprilTag background / tag size
 
 class AprilTags:
     # Required information for calculating spatial coordinates on the host
@@ -26,6 +29,91 @@ class AprilTags:
         return (self.mapXCoord(pt[0]), self.mapYCoord(pt[1]))
 
 
+    def findPlane(self, p1, p2, p3):
+
+# Find the plane's normal vector by taking the cross product of two vectors between pairs of points
+        (P10, P11, P12) = p1
+        (P20, P21, P22) = p2
+        (P30, P31, P32) = p3
+
+        (a0, a1, a2) = (P20-P10, P21-P11, P22-P12)
+        (b0, b1, b2) = (P30-P10, P31-P11, P32-P12)
+        (N0, N1, N2) = (a1*b2-a2*b1, a2*b0-a0*b2, a0*b1-a1*b0)
+
+# Pick any point to compute D
+
+        D = N0*P10 + N1*P11 + N2*P12
+        U = math.sqrt(N0*N0+N1*N1+N2+N2)
+
+# Plane in Ax + By + Cz = D form, where (A, B, C) is the unit vector normal to the plane
+        return (N0/U, N1/U, N2/U, D/U)
+
+
+    @staticmethod
+    def poseAngleFromVector(v):
+        (x, y) = v
+
+# get the normalized components of the vector
+
+        U = math.sqrt(x*x + y*y)
+        if U == 0:
+            return None
+
+        x /= U
+        y /= U
+
+# The angle is now the arccos(y)
+
+        angle = math.acos(y)
+        if angle > math.pi/2:
+            angle -= math.pi/2
+
+        return angle
+        # return math.acos(y)
+
+
+
+    def getPoseAngles(self, depth, xmin, xmax, ymin, ymax, inputShape):
+        pointCount = (xmax-xmin) * (ymax-ymin)
+        pointCloud = [(0, 0, 0)] * pointCount
+
+# Create the point cloud from the depth data
+
+        index = 0
+        for x in range(xmin, xmax):
+            tanAngle_x = self.calc_tan_angle(x - int(depth.shape[1] / 2), inputShape)
+            for y in range (ymin, ymax):
+                tanAngle_y = self.calc_tan_angle(y - int(depth.shape[0] / 2), inputShape)
+
+                z = depth[y,x]
+                if z == 0:
+                    continue
+                
+                Z = z * self.penucheFactorM + self.penucheFactorB
+                X = Z * tanAngle_x
+                Y = -Z * tanAngle_y
+                pointCloud[index] = (X, Y, Z)
+                index += 1
+
+        plane = RANSAC.RANSAC(pointCloud[0:index], index)
+
+        if plane is None:
+            return (None, None)
+
+# Find pose of tag.  In particular, find its rotation about its X and Y axes.
+
+        (A, B, C, D) = plane
+          
+        xAngle = AprilTags.poseAngleFromVector((A, C)) 
+        # if xAngle is not None:
+        #     print("A: {0:.2f}  C: {1:.2f}  X:{2:.2f}".format(A, C, xAngle*180/math.pi)) 
+                  
+        yAngle = AprilTags.poseAngleFromVector((A, B))
+        # if yAngle is not None:
+        #     print("A: {0:.2f}  B: {1:.2f}  Y: {2:.2f}".format(A, B, yAngle*180/math.pi)) 
+                
+        return (xAngle, yAngle)
+    
     # This code assumes depth symmetry around the centroid
 
     # Calculate spatial coordinates from depth map and bounding box (ROI)
@@ -36,10 +124,8 @@ class AprilTags:
         
         inputShape = depth.shape[0]
         xmin, ymin, xmax, ymax = bbox
-        if xmin > xmax:  # bbox flipped
-            xmin, xmax = xmax, xmin
-        if ymin > ymax:  # bbox flipped
-            ymin, ymax = ymax, ymin
+        if xmin > xmax:  xmin, xmax = xmax, xmin
+        if ymin > ymax:  ymin, ymax = ymax, ymin
 
         if xmin == xmax or ymin == ymax: # Box of size zero
             return None
@@ -59,7 +145,23 @@ class AprilTags:
         x = z * tanAngle_x
         y = -z * tanAngle_y
 
-        return (x,y,z)
+# The AprilTags are 6" square.  They are printed on a 10" square.  We can use the extra area to make the
+# pose angle calculation more accurate.
+
+        width = xmax - xmin
+        height = ymax - ymin
+
+        xShift = int(width*(RANSAC_SCALING_FACTOR-1.0)/2)
+        yShift = int(height*(RANSAC_SCALING_FACTOR-1.0)/2)
+
+        xmin1 = max(0, xmin - xShift)
+        xmax1 = min(depth.shape[1]-1, xmax + xShift)
+        ymin1 = max(0, ymin - yShift)
+        ymax1 = min(depth.shape[0]-1, ymax+  yShift)
+
+        (xAngle, yAngle) = self.getPoseAngles(depth, xmin1, xmax1, ymin1, ymax1, inputShape)
+
+        return (x,y,z, xAngle, yAngle)
 
 
         
@@ -118,7 +220,7 @@ class AprilTags:
             res = self.calc_spatials((ptA[0], ptA[1], ptC[0], ptC[1]), cX, cY, depthFrame)
             if res == None:
                 continue
-            (atX, atY, atZ) = res
+            (atX, atY, atZ, xAngle, yAngle) = res
             if depthFrame is None:
                 atX = atX / imageFrame.shape[1] - 0.5
                 atY = atY / imageFrame.shape[0] - 0.5
@@ -144,9 +246,15 @@ class AprilTags:
             tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
             color = (255, 0, 0)
             cv2.putText(imageFrame, tagID, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f"Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f" X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f" Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f" Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            if xAngle is not None:
+                xAngleDeg = round(xAngle*180/math.pi, 0)
+                cv2.putText(imageFrame, f"XA: {xAngleDeg} deg", (lblX, lblY - 0), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            if yAngle is not None:
+                yAngleDeg = round(yAngle*180/math.pi, 0)
+                cv2.putText(imageFrame, f"YA: {yAngleDeg} deg", (lblX, lblY + 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
             if drawingFrame is not None:
                 aa = self.mapCoords(ptA)
@@ -167,8 +275,15 @@ class AprilTags:
                 cv2.putText(drawingFrame, f"X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                 cv2.putText(drawingFrame, f"Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                 cv2.putText(drawingFrame, f"Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                if xAngle is not None:
+                    cv2.putText(drawingFrame, f"XA: {xAngleDeg} deg", (lblX, lblY - 0), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                if yAngle is not None:
+                    cv2.putText(drawingFrame, f"YA: {yAngleDeg} deg", (lblX, lblY + 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
-            objects.append({"objectLabel": tagID, "x": atX, "y": atY, "z": atZ})
+            if xAngle is None: xAngleDeg = 999
+            if yAngle is None: yAngleDeg = 999
+
+            objects.append({"objectLabel": tagID, "x": atX, "y": atY, "z": atZ, "xa": xAngleDeg, "ya": yAngleDeg})
 
         # cv2.imshow("dbg", imageFrame)
         return objects

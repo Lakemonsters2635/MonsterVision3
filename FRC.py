@@ -171,9 +171,14 @@ class FRC:
         if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:
             if self.gripperImage is not None and self.detectionsImage is not None:
                 img = cv2.vconcat([self.gripperImage, self.detectionsImage])
-                self.mtd.enqueueImage("DS View", img)
-                if cscoreAvailable:
-                        self.output.putFrame(img)
+            elif self.gripperImage is not None:
+                img = self.gripperImage
+            else:
+                img = self.detectionsImage
+            # uncomment to turn on local display for HP laptop
+            self.mtd.enqueueImage("DS View", img)
+            if cscoreAvailable:
+                self.output.putFrame(img)
 
         self.frame_counter += 1
 

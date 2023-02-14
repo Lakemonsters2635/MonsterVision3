@@ -11,6 +11,14 @@ import importlib
 import Contours
 import DAI
 import depthai as dai
+import RANSAC
+
+plane = RANSAC.findPlane((-3, -5, 15), (0, 0, 15), (3, -5, 15))
+print(plane)
+plane = RANSAC.findPlane((-3, -5, 18), (0, 0, 15), (3, -5, 12))
+print(plane)
+plane = RANSAC.findPlane((-3, -5, 16.73205), (0, 0, 15), (3, -5, 13.26795))
+print(plane)
 
 def processExtra1(imageFrame, depthFrame, depthFrameColor, drawingFrame, contours):
     return contours.detect(imageFrame, depthFrame, depthFrameColor, drawingFrame)
@@ -45,7 +53,7 @@ def runOAK1(devInfo, cam):
 
 def runOAKD(devInfo, cam):
     OAK = importlib.import_module("MV3")            # Allows substitution of other pilelines!
-    aprilTags = AprilTags.AprilTags("tag16h5")  
+    aprilTags = AprilTags.AprilTags("tag16h5")
     oak = OAK.OAK(devInfo, frc.LaserDotProjectorCurrent)
     nnConfig = oak.read_nn_config()
 
@@ -101,11 +109,11 @@ if OAK_1_DEVINFO is not None: print(f"{OAK_1_MXID} OAK-1")
 thread1 = None
 threadD = None
 
-if OAK_1_MXID is not None:
+if OAK_1_DEVINFO is not None:
     thread1 = threading.Thread(target=runOAK1, args=(OAK_1_DEVINFO, "Gripper", ))
     thread1.start()
 
-if OAK_D_MXID is not None:
+if OAK_D_DEVINFO is not None:
     threadD = threading.Thread(target=runOAKD, args=(OAK_D_DEVINFO, "Chassis", ))
     threadD.start()
 

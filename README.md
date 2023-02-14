@@ -139,3 +139,49 @@ You're SSH session will be disconnected from the Pi.  If you want to reconnect, 
 Once again, point your browser to http://wpilib.local.  Click on the **Vision Status** button in the left pane.  You can use the 4 buttons (**Up**, **Down**, **Terminate**, and **Kill**) to control MonsterVision3.  It can also be useful to enable Console Output.  That way, if you need to restart MonsterVision3, you can see its printed output.
 
 You can view a reduced-framerate version of the annotated RGB camera stream by browsing http://wpilib.local:1181.  This same stream is also available via the Shuffleboard.
+
+### Using a Laptop as Network Table Server
+
+A laptop or other linux device may run this code and act as a server for network tables to ensure the desired output is properly being placed in a network table that shuffleboard can read.
+
+In `/boot/frc.json`, set the property `"ntmode": "server"` such that a network table server will be started up when the code is run.  Additionally, comment out the `"hasDisplay"` property.  Example:
+```
+{
+    "cameras": [],
+    "ntmode": "server",
+    "switched cameras": [],
+    "team": 2635,
+    "XXXhasDisplay": 1,
+    "LaserDotProjectorCurrent": 512
+}
+```
+
+In order to visualize the results, in `FRC.displayResults()` uncomment the `enqueueImage` line for `DS View`: 
+
+```
+    # uncomment to turn on local display for HP laptop
+    self.mtd.enqueueImage("DS View", img)
+```
+
+### Using a Laptop / Raspberry Pi as a client on the robot.
+
+#### Laptop
+
+```
+    ...
+    "ntmode": "client",
+    "hasDisplay": 1,
+    ...
+```
+
+#### Raspberry Pi
+
+Comment out the hasDisplay when running.
+
+```
+    ...
+    "ntmode": "client",
+    "_hasDisplay": 1,
+    ...
+```
+
