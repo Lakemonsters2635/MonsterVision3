@@ -20,3 +20,4 @@ __pycache__/MultiThreadedDisplay.cpython-310.pyc
 __pycache__/DAI.cpython-310.pyc
 __pycache__/RANSAC.cpython-310.pyc
 pointCloud.txt
+LSFit.py
