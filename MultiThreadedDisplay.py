@@ -9,12 +9,10 @@ class MTD:
 
     def enqueueImage(self, window : str, image):
         self.Q.put((window, image))
-        # print(f"{image[0][0]} => {window}")
 
     def displayLoop(self):
         while True:
             (window, image) = self.Q.get(True)
-            # print(f"{image[0][0]} <= {window}")
             cv2.imshow(window, image)
             self.Q.task_done()
             wk = cv2.waitKey(1)

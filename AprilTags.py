@@ -50,8 +50,7 @@ class AprilTags:
 
 
     @staticmethod
-    def poseAngleFromVector(v):
-        (x, y) = v
+    def poseAngleFromVector(x, y):
 
 # get the normalized components of the vector
 
@@ -69,7 +68,6 @@ class AprilTags:
             angle -= math.pi/2
 
         return angle
-        # return math.acos(y)
 
 
 
@@ -104,11 +102,11 @@ class AprilTags:
 
         (A, B, C, D) = plane
           
-        xAngle = AprilTags.poseAngleFromVector((A, C)) 
+        xAngle = AprilTags.poseAngleFromVector(B, C) 
         # if xAngle is not None:
-        #     print("A: {0:.2f}  C: {1:.2f}  X:{2:.2f}".format(A, C, xAngle*180/math.pi)) 
+            # print("A: {0:.2f}  C: {1:.2f}  X:{2:.2f}".format(A, C, xAngle*180/math.pi)) 
                   
-        yAngle = AprilTags.poseAngleFromVector((A, B))
+        yAngle = AprilTags.poseAngleFromVector(A, C)
         # if yAngle is not None:
         #     print("A: {0:.2f}  B: {1:.2f}  Y: {2:.2f}".format(A, B, yAngle*180/math.pi)) 
                 
@@ -245,16 +243,16 @@ class AprilTags:
             # draw the tag family on the image
             tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
             color = (255, 0, 0)
-            cv2.putText(imageFrame, tagID, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f" X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f" Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(imageFrame, f" Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, tagID, (lblX, lblY - 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f" X: {atX} {units}", (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f" Y: {atY} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(imageFrame, f" Z: {atZ} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             if xAngle is not None:
                 xAngleDeg = round(xAngle*180/math.pi, 0)
-                cv2.putText(imageFrame, f"XA: {xAngleDeg} deg", (lblX, lblY - 0), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(imageFrame, f"XA: {xAngleDeg} deg", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             if yAngle is not None:
                 yAngleDeg = round(yAngle*180/math.pi, 0)
-                cv2.putText(imageFrame, f"YA: {yAngleDeg} deg", (lblX, lblY + 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(imageFrame, f"YA: {yAngleDeg} deg", (lblX, lblY + 0), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
             if drawingFrame is not None:
                 aa = self.mapCoords(ptA)
@@ -271,14 +269,14 @@ class AprilTags:
                 # draw the tag family on the image
                 tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
                 color = (255, 0, 0)
-                cv2.putText(drawingFrame, tagID, (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(drawingFrame, f"X: {atX} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(drawingFrame, f"Y: {atY} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(drawingFrame, f"Z: {atZ} {units}", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(drawingFrame, tagID, (lblX, lblY - 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(drawingFrame, f"X: {atX} {units}", (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(drawingFrame, f"Y: {atY} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(drawingFrame, f"Z: {atZ} {units}", (lblX, lblY - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                 if xAngle is not None:
-                    cv2.putText(drawingFrame, f"XA: {xAngleDeg} deg", (lblX, lblY - 0), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(drawingFrame, f"XA: {xAngleDeg} deg", (lblX, lblY - 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                 if yAngle is not None:
-                    cv2.putText(drawingFrame, f"YA: {yAngleDeg} deg", (lblX, lblY + 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(drawingFrame, f"YA: {yAngleDeg} deg", (lblX, lblY + 0), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
             if xAngle is None: xAngleDeg = 999
             if yAngle is None: yAngleDeg = 999

@@ -13,12 +13,12 @@ import DAI
 import depthai as dai
 import RANSAC
 
-plane = RANSAC.findPlane((-3, -5, 15), (0, 0, 15), (3, -5, 15))
-print(plane)
-plane = RANSAC.findPlane((-3, -5, 18), (0, 0, 15), (3, -5, 12))
-print(plane)
-plane = RANSAC.findPlane((-3, -5, 16.73205), (0, 0, 15), (3, -5, 13.26795))
-print(plane)
+# plane = RANSAC.findPlane((-3, -5, 15), (0, 0, 15), (3, -5, 15))
+# print(plane)
+# plane = RANSAC.findPlane((-3, -5, 18), (0, 0, 15), (3, -5, 12))
+# print(plane)
+# plane = RANSAC.findPlane((-3, -5, 16.73205), (0, 0, 15), (3, -5, 13.26795))
+# print(plane)
 
 def processExtra1(imageFrame, depthFrame, depthFrameColor, drawingFrame, contours):
     return contours.detect(imageFrame, depthFrame, depthFrameColor, drawingFrame)
@@ -118,12 +118,12 @@ if OAK_D_DEVINFO is not None:
     threadD.start()
 
 # Now call the display queue worker loop (must be run from main thread)
-# This should never return until the user types 'q' (if a windows are being used)
+# This should never return until the user types 'q' (if windows are being used)
 
 frc.runDisplay()
 
 # Wait for both threads to complete (actually, should never happen!)
 if thread1 is not None: thread1.join()
-if threadD is not None: threadD.join(5)
+if threadD is not None: threadD.join()
 
 
