@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 
 TOLERANCE = 12.7            # Outliers are more than this distance (in mm) from the proposed plane
 SUCCESS = .60               # If we get this percentage of inliers, declare victory
-MAX_ITERATIONS = 300        # Give up after this many iterations and no success
-
-iter = 0
+MAX_ITERATIONS = 600        # Give up after this many iterations and no success
 
 
 def findPlane(P10, P11, P12, P20, P21, P22, P30, P31, P32):
@@ -128,15 +126,5 @@ def RANSAC(pointCloud, pointCount):
     # print(f"ransac: {ransac_time/1000000.0:8.2f} ms")
     # print(f"lsfit: {lsfit_time/1000000.0:8.2f} ms")
     # print(f"total: {total_time/1000000.0:8.2f}ms")
-
-    global iter
-    iter += 1
-
-    # if iter > 100:
-    #     fo = open("pointCloud.txt", "w")
-    #     fo.write("%d"%pointCount)
-    #     for p in pointCloud:   
-    #         fo.write("%f %f %f"%p)
-    #     fo.close()
 
     return (A, B, C, D)
