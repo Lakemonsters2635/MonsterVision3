@@ -132,11 +132,6 @@ class FRC:
 
         self.sd = NetworkTables.getTable("MonsterVision")
 
-        if cscoreAvailable:
-            self.cs = CameraServer.getInstance()
-            self.cs.enableLogging()
-            self.output = self.cs.putVideo("MonsterVision", previewWidth, previewHeight) # TODOnot        
-
     
     
     def writeObjectsToNetworkTable(self, jsonObjects, cam):
@@ -177,8 +172,8 @@ class FRC:
                 img = self.detectionsImage
             # uncomment to turn on local display for HP laptop
             # self.mtd.enqueueImage("DS View", img)
-            if cscoreAvailable:
-                self.output.putFrame(img)
+            self.mtd.enqueueImage("DS Image", img)              # Special window name causes MTD to send to camera server
+            
 
         self.frame_counter += 1
 
