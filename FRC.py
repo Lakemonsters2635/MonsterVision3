@@ -6,12 +6,15 @@ from networktables import NetworkTablesInstance
 import cv2
 import MultiThreadedDisplay as MTD
 import threading
+import platform
 
 cscoreAvailable = True
 try:
     from cscore import CameraServer
 except ImportError:
     cscoreAvailable = False
+
+onRobot = platform.uname().node == "wpilibpi"
 
 CAMERA_FPS = 25
 DESIRED_FPS = 10		# seem to actually get 1/2 this.  Don't know why.....
@@ -167,8 +170,9 @@ class FRC:
                 img = self.gripperImage
             else:
                 img = self.detectionsImage
-            # uncomment to turn on local display for HP laptop
-            # self.mtd.enqueueImage("DS View", img)
+
+            if not onRobot:
+                self.mtd.enqueueImage("DS View", img)
             self.mtd.enqueueImage("DS Image", img)              # Special window name causes MTD to send to camera server
             
 
