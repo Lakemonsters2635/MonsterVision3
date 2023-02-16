@@ -119,7 +119,7 @@ python3 -m pip install -r requirementsWPI.txt
 ```
 Now we need to configure the Network Tables.  Point your browser to http://wpilibpi.local.  This loads the web interface.  Note that the first time you access this page, the SD card will be marked Writable (the buttons at the top of the web page).  On subsequent accesses, you need to click that button if you want to write to the Pi.
 
-Click on `Network Settings` in the left pane.  Make sure the `Client` switch is turned on and the `Team Number` is set to your team number.
+Click on `Vision Settings` in the left pane.  Make sure the `Client` switch is turned on and the `Team Number` is set to your team number.
 
 Return now to your SSH session so we can configure the correct detection network. Copy one of the `.json` files from `./models` directory.  For example, to use the 2022 Cargo YOLOv6 Tiny network:
 ```shell
