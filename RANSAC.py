@@ -6,6 +6,7 @@ import numpy as np
 TOLERANCE = 12.7            # Outliers are more than this distance (in mm) from the proposed plane
 SUCCESS = .60               # If we get this percentage of inliers, declare victory
 MAX_ITERATIONS = 600        # Give up after this many iterations and no success
+MAX_POINTS_TO_FIT = 250         # Do the LS Fit on a randomly selected subset of points (for performance)
 
 
 def findPlane(P10, P11, P12, P20, P21, P22, P30, P31, P32):
@@ -87,6 +88,8 @@ def RANSAC(pointCloud, pointCount):
     pointsToFit = abs(A*pointCloud[:,0] + B*pointCloud[:,1] + C*pointCloud[:,2] +D) < TOLERANCE
     num = pointsToFit.sum()
     subArray = pointCloud[pointsToFit]
+    if (MAX_POINTS_TO_FIT < num):
+        subArray = subArray[np.random.randint(subArray.shape[0], size=MAX_POINTS_TO_FIT)]
 
     tmp_b = np.matrix(subArray[:,2]).T
     tmp_a = np.matrix(np.insert(subArray[:,0:2], 2, 1, axis=1))
