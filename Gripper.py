@@ -185,7 +185,8 @@ class OAK:
 
         # Properties
 
-        self.camRgb.setPreviewSize(self.inputSize)
+        if self.useNN:
+            self.camRgb.setPreviewSize(self.inputSize)
         self.camRgb.setResolution(self.rgbResolution)
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
