@@ -33,10 +33,8 @@ def RANSAC(pointCloud, pointCount):
     if pointCount == 0:
         return None
 
-    start_time = time.monotonic_ns()
-
-    pc = np.array(pointCloud)
-    
+    start_time = time.process_time_ns()
+   
 # Begin RANSAC
 
     best = (0, 0, 0, 0)
@@ -58,7 +56,7 @@ def RANSAC(pointCloud, pointCount):
         inliers = 0
         found = False
 
-        inrange = abs(A*pc[:,0] + B*pc[:,1] + C*pc[:,2] +D) < TOLERANCE
+        inrange = abs(A*pointCloud[:,0] + B*pointCloud[:,1] + C*pointCloud[:,2] +D) < TOLERANCE
         inliers = inrange.sum()
 
 # If we are better than previous best, record it.  If we have enough inliers, return
@@ -76,7 +74,7 @@ def RANSAC(pointCloud, pointCount):
     if not found:
         return None
 
-    ransac_time = time.monotonic_ns()
+    ransac_time = time.process_time_ns()
 
     # print()
     # print("A: {0:.2f}  B: {1:.2f}  C: {2:.2f}  D: {3:.2f}".format(A, B, C, D))
@@ -86,16 +84,16 @@ def RANSAC(pointCloud, pointCount):
 # Compute distance from point to plane.  Dist = Ax + By + Cz + D
 # This simplified formula works because (A, B, C) is a unit vector.
 
-    pointsToFit = abs(A*pc[:,0] + B*pc[:,1] + C*pc[:,2] +D) < TOLERANCE
+    pointsToFit = abs(A*pointCloud[:,0] + B*pointCloud[:,1] + C*pointCloud[:,2] +D) < TOLERANCE
     num = pointsToFit.sum()
-    subArray = pc[pointsToFit]
+    subArray = pointCloud[pointsToFit]
 
     tmp_b = np.matrix(subArray[:,2]).T
     tmp_a = np.matrix(np.insert(subArray[:,0:2], 2, 1, axis=1))
 
     fit = (tmp_a.T * tmp_a).I * tmp_a.T * tmp_b
 
-    lsfit_time = time.monotonic_ns()
+    lsfit_time = time.process_time_ns()
 
     A = fit[0,0]
     B = fit[1,0]
@@ -122,8 +120,8 @@ def RANSAC(pointCloud, pointCount):
     lsfit_time -= ransac_time
     ransac_time -= start_time
 
-    # print(f"ransac: {ransac_time/1000000.0:8.2f} ms")
-    # print(f"lsfit: {lsfit_time/1000000.0:8.2f} ms")
-    # print(f"total: {total_time/1000000.0:8.2f}ms")
+    print(f"ransac:    {ransac_time/1000000.0:8.2f} ms")
+    print(f"lsfit({num}): {lsfit_time/1000000.0:8.2f} ms")
+    print(f"total:    {total_time/1000000.0:8.2f}ms")
 
     return (A, B, C, D)

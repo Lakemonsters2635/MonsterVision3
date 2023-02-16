@@ -58,7 +58,8 @@ class AprilTags:
 
     def getPoseAngles(self, depth, xmin, xmax, ymin, ymax, inputShape):
         pointCount = (xmax-xmin) * (ymax-ymin)
-        pointCloud = [(0, 0, 0)] * pointCount
+        pointCloud = np.full((pointCount, 3), (0, 0, 0))
+        # pointCloud = [(0, 0, 0)] * pointCount
 
 # Create the point cloud from the depth data
 
