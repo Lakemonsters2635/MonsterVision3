@@ -51,22 +51,7 @@ class AprilTags:
 
     @staticmethod
     def poseAngleFromVector(x, y):
-
-# get the normalized components of the vector
-
-        U = math.sqrt(x*x + y*y)
-        if U == 0:
-            return None
-
-        x /= U
-        y /= U
-
-# The angle is now the arccos(y)
-
-        angle = math.acos(y)
-        if angle > math.pi/2:
-            angle -= math.pi/2
-
+        angle = math.pi - math.atan2(y, x)
         return angle
 
 
@@ -102,11 +87,11 @@ class AprilTags:
 
         (A, B, C, D) = plane
           
-        xAngle = AprilTags.poseAngleFromVector(B, C) 
+        xAngle = math.pi - math.atan2(C, B)
         # if xAngle is not None:
             # print("A: {0:.2f}  C: {1:.2f}  X:{2:.2f}".format(A, C, xAngle*180/math.pi)) 
                   
-        yAngle = AprilTags.poseAngleFromVector(A, C)
+        yAngle = math.pi - math.atan2(C, A)
         # if yAngle is not None:
         #     print("A: {0:.2f}  B: {1:.2f}  Y: {2:.2f}".format(A, B, yAngle*180/math.pi)) 
                 

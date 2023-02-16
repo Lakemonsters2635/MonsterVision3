@@ -8,28 +8,7 @@ TOLERANCE = 12.7            # Outliers are more than this distance (in mm) from 
 SUCCESS = .60               # If we get this percentage of inliers, declare victory
 MAX_ITERATIONS = 300        # Give up after this many iterations and no success
 
-PLOTIT = False
-
 iter = 0
-
-def poseAngleFromVector(x, y):
-
-# get the normalized components of the vector
-
-    U = math.sqrt(x*x + y*y)
-    if U == 0:
-        return None
-
-    x /= U
-    y /= U
-
-# The angle is now the arccos(y)
-
-    angle = math.acos(y)
-    if angle > math.pi/2:
-        angle -= math.pi/2
-
-    return angle
 
 
 def findPlane(P10, P11, P12, P20, P21, P22, P30, P31, P32):
@@ -58,6 +37,8 @@ def RANSAC(pointCloud, pointCount):
         return None
 
     start_time = time.monotonic_ns()
+
+    pc = np.array(pointCloud)
     
 # Begin RANSAC
 
@@ -80,15 +61,8 @@ def RANSAC(pointCloud, pointCount):
         inliers = 0
         found = False
 
-        for (p0, p1, p2) in pointCloud:
-
-# Compute distance from point to plane.  Dist = Ax + By + Cz + D
-# This simplified formula works because (A, B, C) is a unit vector.
-
-            Dist = abs(A*p0 + B*p1 + C*p2 + D)
-            
-            if Dist < TOLERANCE:
-                inliers += 1
+        inrange = abs(A*pc[:,0] + B*pc[:,1] + C*pc[:,2] +D) < TOLERANCE
+        inliers = inrange.sum()
 
 # If we are better than previous best, record it.  If we have enough inliers, return
 
@@ -112,58 +86,19 @@ def RANSAC(pointCloud, pointCount):
 
 # Now do a least squares fit to the inliers.
 
-    tmp_A = []
-    tmp_b = []
-
-    if PLOTIT:
-        xs = []
-        ys = []
-        zs = []
-
-    for (p0, p1, p2) in pointCloud:
-
 # Compute distance from point to plane.  Dist = Ax + By + Cz + D
 # This simplified formula works because (A, B, C) is a unit vector.
 
-        Dist = abs(A*p0 + B*p1 + C*p2 + D)
-        
-        if Dist < TOLERANCE:
-            tmp_A.append([p0, p1, 1])
-            tmp_b.append(p2)
-            if PLOTIT:
-                xs.append(p0)
-                ys.append(p1)
-                zs.append(p2)
+    pointsToFit = abs(A*pc[:,0] + B*pc[:,1] + C*pc[:,2] +D) < TOLERANCE
+    num = pointsToFit.sum()
+    subArray = pc[pointsToFit]
 
-    b = np.matrix(tmp_b).T
-    AA = np.matrix(tmp_A)
+    tmp_b = np.matrix(subArray[:,2]).T
+    tmp_a = np.matrix(np.insert(subArray[:,0:2], 2, 1, axis=1))
 
-# Manual solution
-    fit = (AA.T * AA).I * AA.T * b
+    fit = (tmp_a.T * tmp_a).I * tmp_a.T * tmp_b
 
     lsfit_time = time.monotonic_ns()
-
-    if PLOTIT:
-        # plot raw data
-        plt.figure()
-        ax = plt.subplot(111, projection='3d')
-        ax.scatter(xs, ys, zs, color='b')
-# plot plane
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        X,Y = np.meshgrid(np.arange(xlim[0], xlim[1]),
-                        np.arange(ylim[0], ylim[1]))
-        Z = np.zeros(X.shape)
-        for r in range(X.shape[0]):
-            for c in range(X.shape[1]):
-                Z[r,c] = fit[0] * X[r,c] + fit[1] * Y[r,c] + fit[2]
-        ax.plot_wireframe(X,Y,Z, color='k')
-
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
-        plt.show()
-
 
     A = fit[0,0]
     B = fit[1,0]
@@ -181,10 +116,10 @@ def RANSAC(pointCloud, pointCount):
     C /= U
     D /= U
 
-    # xAngle = poseAngleFromVector(B, C) 
-    # yAngle = poseAngleFromVector(A, C)
+    # xAngle = math.pi - math.atan2(C, B)
+    # yAngle = math.pi - math.atan2(C, A)
     # print("A: {0:.2f}  B: {1:.2f}  C:{2:.2f}  D: {3:.2f}  X: {4:.2f}  Y:  {5:.2f}".format(A, B, C, D, xAngle*180/math.pi,  yAngle*180/math.pi)) 
-    # print("X: {0:.2f}".format(xAngle*180/math.pi))
+    # print("X: {0:.2f}".format    print(f"ransac: {ransac_time/1000000.0:8.2f} ms")
 
     total_time = lsfit_time - start_time
     lsfit_time -= ransac_time
