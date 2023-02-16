@@ -8,7 +8,7 @@ except ImportError:
     cscoreAvailable = False
 
 class MTD:
-    def __init__(self):
+    def __init__(self, previewWidth, previewHeight):
         self.Q = queue.Queue()
         self.allDone = False
         
