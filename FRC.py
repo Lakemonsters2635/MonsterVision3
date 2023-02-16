@@ -176,7 +176,7 @@ class FRC:
             else:
                 img = self.detectionsImage
             # uncomment to turn on local display for HP laptop
-            self.mtd.enqueueImage("DS View", img)
+            # self.mtd.enqueueImage("DS View", img)
             if cscoreAvailable:
                 self.output.putFrame(img)
 
