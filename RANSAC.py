@@ -2,7 +2,6 @@ import math
 import random
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 
 TOLERANCE = 12.7            # Outliers are more than this distance (in mm) from the proposed plane
 SUCCESS = .60               # If we get this percentage of inliers, declare victory
