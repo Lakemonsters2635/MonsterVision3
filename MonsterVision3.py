@@ -42,7 +42,7 @@ def displayResults(fullFrame, depthFrameColor, detectionFrame, cam):
 def runOAK1(devInfo, cam):
     OAK = importlib.import_module("Gripper")            # Allows substitution of other pilelines!
     contours = Contours.Contours()
-    oak = OAK.OAK(devInfo, None)
+    oak = OAK.OAK(devInfo, None, useNN=True)
     nnConfig = oak.read_nn_config()
 
     spatialDetectionNetwork = oak.setupSDN(nnConfig)

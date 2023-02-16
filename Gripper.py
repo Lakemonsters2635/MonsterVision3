@@ -37,11 +37,14 @@ def _average_depth_coord(pt1, pt2, padding_factor):
 
 class OAK:
  
-    def __init__(self, devInfo : dai.DeviceInfo, laserProjectorNotUsed=None):
+    def __init__(self, devInfo : dai.DeviceInfo, laserProjectorNotUsed=None, useNN=False):
         self.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
         self.rgbWidth = 1920
         self.rgbHeight = 1080
-        self.ispScale = (1, 6)
+        if useNN:
+            self.ispScale = (2, 3)
+        else:
+            self.ispScale = (1, 6)
 
         self.bbfraction = 0.2
 
@@ -52,6 +55,9 @@ class OAK:
 
         self.syncNN = True
         self.devInfo = devInfo
+
+        self.useNN = useNN
+
         return
 
 
@@ -83,6 +89,12 @@ class OAK:
     
     def setupSDN(self, nnConfig):
 
+        # Create pipeline
+        self.pipeline = dai.Pipeline()
+
+        if not self.useNN:
+            return None
+
         nnJSON = self.read_nn_config()
         self.LABELS = nnJSON['mappings']['labels']
         nnConfig = nnJSON['nn_config']
@@ -100,9 +112,6 @@ class OAK:
         # MobilenetSSD label texts
         self.labelMap = self.LABELS
 
-        # Create pipeline
-        self.pipeline = dai.Pipeline()
-
         try:
             self.openvinoVersion = nnConfig['openvino_version']
         except KeyError:
@@ -118,9 +127,9 @@ class OAK:
 
         family = nnConfig['NN_family']
         if family == 'mobilenet':
-            detectionNodeType = dai.node.MobileNetSpatialDetectionNetwork
+            detectionNodeType = dai.node.MobileNetDetectionNetwork
         elif family == 'YOLO':
-            detectionNodeType = dai.node.YoloSpatialDetectionNetwork
+            detectionNodeType = dai.node.YoloDetectionNetwork
         else:
             raise Exception(f'Unknown NN_family: {family}')
 
@@ -151,9 +160,6 @@ class OAK:
         spatialDetectionNetwork.setBlobPath(nnBlobPath)
         spatialDetectionNetwork.setConfidenceThreshold(0.5)
         spatialDetectionNetwork.input.setBlocking(False)
-        spatialDetectionNetwork.setBoundingBoxScaleFactor(self.bbfraction)
-        spatialDetectionNetwork.setDepthLowerThreshold(100)
-        spatialDetectionNetwork.setDepthUpperThreshold(5000)
 
         return spatialDetectionNetwork
 
@@ -173,9 +179,13 @@ class OAK:
         self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
         self.xoutRgb.setStreamName("rgb")
 
+        if self.useNN:
+            self.xoutNN = self.pipeline.create(dai.node.XLinkOut)
+            self.xoutNN.setStreamName("detections")
+
         # Properties
 
-        # self.camRgb.setPreviewSize(self.inputSize)
+        self.camRgb.setPreviewSize(self.inputSize)
         self.camRgb.setResolution(self.rgbResolution)
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
@@ -198,7 +208,12 @@ class OAK:
 
         # Linking
 
-        self.camRgb.isp.link(self.xoutRgb.input)
+        if self.useNN:
+            self.camRgb.preview.link(spatialDetectionNetwork.input)
+            spatialDetectionNetwork.out.link(self.xoutNN.input)
+            spatialDetectionNetwork.passthrough.link(self.xoutRgb.input)
+        else:
+            self.camRgb.isp.link(self.xoutRgb.input)
 
         # Extra for debugging
 
@@ -207,7 +222,8 @@ class OAK:
 
 
     def runPipeline(self, processDetections, objectsCallback=None, displayResults=None, processImages=None, cam="", imagesParam=None):
-        # Connect to device and start pipeline
+        
+    # Connect to device and start pipeline
         with dai.Device(self.pipeline, self.devInfo) as device:
 
             # Output queues will be used to get the rgb frames and nn data from the outputs defined above
@@ -217,34 +233,124 @@ class OAK:
             counter = 0
             self.fps = 0
 
-            while True:
-                self.inRgb = rgbQueue.get()
-                self.frame = self.inRgb.getCvFrame()
+            if self.useNN:
+                detectionNNQueue = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
 
-                counter += 1
-                current_time = time.monotonic()
-                if (current_time - startTime) > 1:
-                    self.fps = counter / (current_time - startTime)
-                    counter = 0
-                    startTime = current_time
+                while True:
+                    self.inPreview = rgbQueue.get()
+                    self.inDet = detectionNNQueue.get()
 
-                objects = []
+                    counter += 1
+                    current_time = time.monotonic()
+                    if (current_time - startTime) > 1:
+                        self.fps = counter / (current_time - startTime)
+                        counter = 0
+                        startTime = current_time
 
-                if processImages is not None:
-                    additionalObjects = processImages(self.frame, None, None, self.frame, imagesParam)
-                    if additionalObjects is not None:
-                        objects = objects + additionalObjects
+                    self.frame = self.inPreview.getCvFrame()
 
-                if objectsCallback is not None:
-                    objectsCallback(objects, cam)
+                    detections = self.inDet.detections
+                    if len(detections) != 0:
+                        objects = processDetections(self, detections)
+                        if objects is None:
+                            objects = []
+                    else:
+                        objects = []
 
-                self.displayDebug(device)
+                    # if processImages is not None:
+                    #     additionalObjects = processImages(self.frame, None, None, self.frame, imagesParam)
+                    #     if additionalObjects is not None:
+                    #         objects.extend(additionalObjects)
 
-                if displayResults is not None:
-                    if displayResults(self.frame, None, None, cam) == False:
-                        return
+                    if objectsCallback is not None:
+                        objectsCallback(objects, cam)
+
+                    self.displayDebug(device)
+
+                    if displayResults is not None:
+                        if displayResults(self.frame, None, None, cam) == False:
+                            return
+            else:
+                while True:
+                    self.inRgb = rgbQueue.get()
+                    self.frame = self.inRgb.getCvFrame()
+
+                    counter += 1
+                    current_time = time.monotonic()
+                    if (current_time - startTime) > 1:
+                        self.fps = counter / (current_time - startTime)
+                        counter = 0
+                        startTime = current_time
+
+                    objects = []
+
+                    if processImages is not None:
+                        additionalObjects = processImages(self.frame, None, None, self.frame, imagesParam)
+                        if additionalObjects is not None:
+                            objects = objects + additionalObjects
+
+                    if objectsCallback is not None:
+                        objectsCallback(objects, cam)
+
+                    self.displayDebug(device)
+
+                    if displayResults is not None:
+                        if displayResults(self.frame, None, None, cam) == False:
+                            return
 
 
     def processDetections(self, detections):
-        return
-                
+        # If the frame is available, draw bounding boxes on it and show the frame
+        height = self.frame.shape[0]
+        width = self.frame.shape[1]
+
+        # re-initializes objects to zero/empty before each frame is read
+        objects = []
+
+        for detection in detections:
+            # Find center of bounding box
+
+            cX = (detection.xmin + detection.xmax) / 2
+            cY = (detection.ymin + detection.ymax) / 2
+            R = max((detection.xmax - detection.xmin)*width, (detection.ymax - detection.ymin)*height) / (2*width)
+
+            # Denormalize bounding box.  Coordinates in pixels on frame
+
+            x1 = int(detection.xmin * width)
+            x2 = int(detection.xmax * width)
+            y1 = int(detection.ymin * height)
+            y2 = int(detection.ymax * height)
+
+            try:
+                label = self.labelMap[detection.label]
+
+            except KeyError:
+                label = detection.label
+
+            if detection.label == 1:
+                color = (255, 0, 0)
+            else:
+                color = (0, 0, 255)
+
+            #print(detection.spatialCoordinates.x, detection.spatialCoordinates.y, detection.spatialCoordinates.z)
+
+            cv2.putText(self.frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(self.frame, "{:.2f}".format(detection.confidence * 100), (x1 + 10, y1 + 35),
+                        cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(self.frame, f"X: {round(cX, 3)} in", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(self.frame, f"Y: {round(cY,3)} in", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(self.frame, f"R: {round(R, 3)} in", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+            cv2.circle(self.frame, (int(cX*width), int(cY*height)), 5, (0, 0, 255), -1)
+            cv2.circle(self.frame, (int(cX*width), int(cY*height)), int(R*width), (255, 0, 0), 2)
+
+            # cv2.rectangle(self.frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+
+            objects.append({"objectLabel": self.LABELS[detection.label], "x": cX,
+                            "y": cY, "z": R,
+                            "confidence": round(detection.confidence, 2)})
+
+        cv2.putText(self.frame, "NN fps: {:.2f}".format(self.fps), (2, self.frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
+                    (255, 255, 255))
+
+        return objects                

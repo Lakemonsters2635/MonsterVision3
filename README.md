@@ -156,12 +156,7 @@ In `/boot/frc.json`, set the property `"ntmode": "server"` such that a network t
 }
 ```
 
-In order to visualize the results, in `FRC.displayResults()` uncomment the `enqueueImage` line for `DS View`: 
-
-```
-    # uncomment to turn on local display for HP laptop
-    self.mtd.enqueueImage("DS View", img)
-```
+Local visualization of results (equivalent to the Driver's Station stream) is automatically enabled when NOT running under WPILibPi.  If platform.uname().node == "wpilibpi", local visualization is disable.  DO NOT change the nodename of "wpilibpi".  Otherwise, the code will attempt to display results on a non-existent screen.
 
 ### Using a Laptop / Raspberry Pi as a client on the robot.
 

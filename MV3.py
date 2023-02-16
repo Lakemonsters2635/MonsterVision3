@@ -59,8 +59,6 @@ class OAK:
         self.PREVIEW_WIDTH = 200
         self.PREVIEW_HEIGHT = 200
 
-        self.syncNN = True
-
 
     NN_FILE = "/boot/nn.json"
 
@@ -309,10 +307,7 @@ class OAK:
         self.monoRight.out.link(self.stereo.right)
 
         self.camRgb.preview.link(spatialDetectionNetwork.input)
-        if self.syncNN:
-            spatialDetectionNetwork.passthrough.link(self.xoutRgb.input)
-        else:
-            self.camRgb.preview.link(self.xoutRgb.input)
+        spatialDetectionNetwork.passthrough.link(self.xoutRgb.input)
 
         spatialDetectionNetwork.out.link(self.xoutNN.input)
 
