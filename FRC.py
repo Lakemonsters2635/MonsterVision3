@@ -24,7 +24,7 @@ class FRC:
     NN_FILE = "/boot/nn.json"
 
 
-    def __init__(self):
+    def __init__(self, previewWidth, previewHeight):
         self.team = 0
         self.server = False
         self.hasDisplay = False
@@ -34,13 +34,26 @@ class FRC:
         self.LaserDotProjectorCurrent = 0
         self.lastTime = 0
 
-        self.mtd = MTD.MTD()
+        self.mtd = MTD.MTD(previewWidth, previewHeight)
         self.lockNT = threading.Lock()
 
         self.gripperImage = None
         self.detectionsImage = None
 
-    # cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+        self.read_frc_config()
+
+        self.ntinst = NetworkTablesInstance.getDefault()
+
+        if self.server:
+            print("Setting up NetworkTables server")
+            self.ntinst.startServer()
+        else:
+            print("Setting up NetworkTables client for team {}".format(self.team))
+            self.ntinst.startClientTeam(self.team)
+            self.ntinst.startDSClient()
+
+        self.sd = NetworkTables.getTable("MonsterVision")
+
     
 
     # Return True if we're running on Romi.  False if we're a coprocessor on a big 'bot
@@ -118,20 +131,6 @@ class FRC:
         return True
     
     def start(self, previewWidth, previewHeight):
-        self.read_frc_config()
-
-        self.ntinst = NetworkTablesInstance.getDefault()
-
-        if self.server:
-            print("Setting up NetworkTables server")
-            self.ntinst.startServer()
-        else:
-            print("Setting up NetworkTables client for team {}".format(self.team))
-            self.ntinst.startClientTeam(self.team)
-            self.ntinst.startDSClient()
-
-        self.sd = NetworkTables.getTable("MonsterVision")
-
     
     
     def writeObjectsToNetworkTable(self, jsonObjects, cam):
