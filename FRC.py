@@ -130,8 +130,6 @@ class FRC:
         
         return True
     
-    def start(self, previewWidth, previewHeight):
-    
     
     def writeObjectsToNetworkTable(self, jsonObjects, cam):
         # Protect NT access with a lock.  Just in case NT implementation is not thread-safe
