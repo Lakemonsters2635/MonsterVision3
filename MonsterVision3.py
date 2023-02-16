@@ -102,6 +102,10 @@ def checkCam(infos, mxid):
 OAK_D_DEVINFO = checkCam(infos, OAK_D_MXID)
 OAK_1_DEVINFO = checkCam(infos, OAK_1_MXID)
 
+if OAK_D_DEVINFO is None and OAK_1_DEVINFO is None:
+    print("No cameras found")
+    exit()
+
 print("Using cameras:")
 if OAK_D_DEVINFO is not None: print(f"{OAK_D_MXID} OAK-D")
 if OAK_1_DEVINFO is not None: print(f"{OAK_1_MXID} OAK-1")
