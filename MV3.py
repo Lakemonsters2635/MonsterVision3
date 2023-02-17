@@ -150,7 +150,8 @@ class OAK:
             spatialDetectionNetwork.setAnchors(nnConfig['NN_specific_metadata']['anchors'])
             spatialDetectionNetwork.setAnchorMasks(nnConfig['NN_specific_metadata']['anchor_masks'])
             spatialDetectionNetwork.setIouThreshold(nnConfig['NN_specific_metadata']['iou_threshold'])
-            spatialDetectionNetwork.setConfidenceThreshold(nnConfig['NN_specific_metadata']['confidence_threshold'])
+            x = nnConfig['NN_specific_metadata']['confidence_threshold']
+            spatialDetectionNetwork.setConfidenceThreshold(x)
         else:
             x = nnConfig['confidence_threshold']
             spatialDetectionNetwork.setConfidenceThreshold(x)
