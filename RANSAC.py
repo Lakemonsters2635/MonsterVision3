@@ -130,7 +130,7 @@ def RANSAC(pointCloud, pointCount):
     ransac_time -= start_time
 
     # print(f"ransac:    {ransac_time/1000000.0:8.2f} ms")
-    # print(f"lsfit({num}): {lsfit_time/1000000.0:8.2f} ms")
+    # print(f"lsfit({subArray.shape[0]}): {lsfit_time/1000000.0:8.2f} ms")
     # print(f"total:    {total_time/1000000.0:8.2f}ms")
 
     return (A, B, C, D)
