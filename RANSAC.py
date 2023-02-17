@@ -34,46 +34,49 @@ def RANSAC(pointCloud, pointCount):
     if pointCount == 0:
         return None
 
+    skipRANSAC = True
+
     start_time = time.process_time_ns()
    
 # Begin RANSAC
 
-    best = (0, 0, 0, 0)
-    bestCount = 0
+    if not skipRANSAC:
+        best = (0, 0, 0, 0)
+        bestCount = 0
 
-    for i in range(0, MAX_ITERATIONS):
+        for i in range(0, MAX_ITERATIONS):
 
-# Choose 3 random points and find the plane they define
+    # Choose 3 random points and find the plane they define
 
-        (P10, P11, P12) = pointCloud[random.randint(0, pointCount-1)]
-        (P20, P21, P22) = pointCloud[random.randint(0, pointCount-1)]
-        (P30, P31, P32) = pointCloud[random.randint(0, pointCount-1)]
+            (P10, P11, P12) = pointCloud[random.randint(0, pointCount-1)]
+            (P20, P21, P22) = pointCloud[random.randint(0, pointCount-1)]
+            (P30, P31, P32) = pointCloud[random.randint(0, pointCount-1)]
+            
+            (A, B, C, D) = findPlane(P10, P11, P12, P20, P21, P22, P30, P31, P32)
+
+    # Now loop over all points, deciding if each one fits the model or not.  We don't need to track the points
+    # that fit.  We just need to count them
+
+            inliers = 0
+            found = False
+
+            inrange = abs(A*pointCloud[:,0] + B*pointCloud[:,1] + C*pointCloud[:,2] +D) < TOLERANCE
+            inliers = inrange.sum()
+
+    # If we are better than previous best, record it.  If we have enough inliers, return
+
+            if inliers > bestCount:
+                bestCount = inliers
+                best = (A, B, C, D)
+                if (inliers / pointCount) >= SUCCESS:
+                    found = True
+                    break
+                    # return (A, B, C, D)
         
-        (A, B, C, D) = findPlane(P10, P11, P12, P20, P21, P22, P30, P31, P32)
-
-# Now loop over all points, deciding if each one fits the model or not.  We don't need to track the points
-# that fit.  We just need to count them
-
-        inliers = 0
-        found = False
-
-        inrange = abs(A*pointCloud[:,0] + B*pointCloud[:,1] + C*pointCloud[:,2] +D) < TOLERANCE
-        inliers = inrange.sum()
-
-# If we are better than previous best, record it.  If we have enough inliers, return
-
-        if inliers > bestCount:
-            bestCount = inliers
-            best = (A, B, C, D)
-            if (inliers / pointCount) >= SUCCESS:
-                found = True
-                break
-                # return (A, B, C, D)
-    
-# Never found a good plane.  Give up.
-#     
-    if not found:
-        return None
+    # Never found a good plane.  Give up.
+    #     
+        if not found:
+            return None
 
     ransac_time = time.process_time_ns()
 
@@ -85,11 +88,14 @@ def RANSAC(pointCloud, pointCount):
 # Compute distance from point to plane.  Dist = Ax + By + Cz + D
 # This simplified formula works because (A, B, C) is a unit vector.
 
-    pointsToFit = abs(A*pointCloud[:,0] + B*pointCloud[:,1] + C*pointCloud[:,2] +D) < TOLERANCE
-    num = pointsToFit.sum()
-    subArray = pointCloud[pointsToFit]
-    if (MAX_POINTS_TO_FIT < num):
-        subArray = subArray[np.random.randint(subArray.shape[0], size=MAX_POINTS_TO_FIT)]
+    if skipRANSAC:
+        subArray = pointCloud[np.random.randint(pointCloud.shape[0], size=MAX_POINTS_TO_FIT)]
+    else:
+        pointsToFit = abs(A*pointCloud[:,0] + B*pointCloud[:,1] + C*pointCloud[:,2] +D) < TOLERANCE
+        num = pointsToFit.sum()
+        subArray = pointCloud[pointsToFit]
+        if (MAX_POINTS_TO_FIT < num):
+            subArray = subArray[np.random.randint(subArray.shape[0], size=MAX_POINTS_TO_FIT)]
 
     tmp_b = np.matrix(subArray[:,2]).T
     tmp_a = np.matrix(np.insert(subArray[:,0:2], 2, 1, axis=1))
