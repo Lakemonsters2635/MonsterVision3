@@ -63,10 +63,16 @@ class AprilTags:
 
 # Create the point cloud from the depth data
 
+        # make sure we don't have too many points sampled.  Stride the data to sample
+        # the available points when creating our point cloud for making the plane
+        # ensure stride is at least 1
+        stride = int(((xmax - xmin) * (ymax - ymin) / 400) ** 0.5)
+        stride = 1 if stride < 1 else stride
+
         index = 0
-        for x in range(xmin, xmax):
+        for x in range(xmin, xmax, stride):
             tanAngle_x = self.calc_tan_angle(x - int(depth.shape[1] / 2), inputShape)
-            for y in range (ymin, ymax):
+            for y in range (ymin, ymax, stride):
                 tanAngle_y = self.calc_tan_angle(y - int(depth.shape[0] / 2), inputShape)
 
                 z = depth[y,x]
