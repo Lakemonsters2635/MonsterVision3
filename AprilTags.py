@@ -58,7 +58,8 @@ class AprilTags:
 
     def getPoseAngles(self, depth, xmin, xmax, ymin, ymax, inputShape):
         pointCount = (xmax-xmin) * (ymax-ymin)
-        pointCloud = np.full((pointCount, 3), (0, 0, 0))
+        pointCloud = np.full((pointCount, 3), (0.0, 0.0, 0.0))
+        pointCloud1 = np.full((pointCount, 3), (0.0, 0.0, 0.0))
         # pointCloud = [(0, 0, 0)] * pointCount
 
 # Create the point cloud from the depth data
@@ -70,20 +71,21 @@ class AprilTags:
         stride = 1 if stride < 1 else stride
 
         index = 0
+        yLen = int((ymax - ymin) / stride)
+
         for x in range(xmin, xmax, stride):
             tanAngle_x = self.calc_tan_angle(x - int(depth.shape[1] / 2), inputShape)
-            for y in range (ymin, ymax, stride):
-                tanAngle_y = self.calc_tan_angle(y - int(depth.shape[0] / 2), inputShape)
 
-                z = depth[y,x]
-                if z == 0:
-                    continue
-                
-                Z = z * self.penucheFactorM + self.penucheFactorB
-                X = Z * tanAngle_x
-                Y = -Z * tanAngle_y
-                pointCloud[index] = (X, Y, Z)
-                index += 1
+            zv = np.array(depth[ymin:ymax:stride, x]) * self.penucheFactorM + self.penucheFactorB
+            zmask = zv != self.penucheFactorB
+
+            yv = (np.arange(ymin, ymax, stride) - int(depth.shape[0] / 2)) * self.tanHalfHFOV / inputShape
+
+            pc = np.array(list(zip(zv*tanAngle_x, -zv*yv, zv)))
+            num = zmask.sum()
+
+            pointCloud[index:index+num] = pc[zmask]
+            index += num
 
         plane = RANSAC.RANSAC(pointCloud[0:index], index)
 
