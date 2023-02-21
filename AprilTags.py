@@ -59,8 +59,6 @@ class AprilTags:
     def getPoseAngles(self, depth, xmin, xmax, ymin, ymax, inputShape):
         pointCount = (xmax-xmin) * (ymax-ymin)
         pointCloud = np.full((pointCount, 3), (0.0, 0.0, 0.0))
-        pointCloud1 = np.full((pointCount, 3), (0.0, 0.0, 0.0))
-        # pointCloud = [(0, 0, 0)] * pointCount
 
 # Create the point cloud from the depth data
 
@@ -237,6 +235,12 @@ class AprilTags:
             # draw the tag family on the image
             tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
             color = (255, 0, 0)
+
+            if lblY < 75:
+                lblY = 75
+            if lblY > imageFrame.shape[0]:
+                lblY = imageFrame.shape[0]
+
             cv2.putText(imageFrame, tagID, (lblX, lblY - 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.putText(imageFrame, f" X: {atX} {units}", (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.putText(imageFrame, f" Y: {atY} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
