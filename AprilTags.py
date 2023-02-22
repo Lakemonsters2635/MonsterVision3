@@ -234,7 +234,7 @@ class AprilTags:
             lblY = int(cY - ht/2)
             # draw the tag family on the image
             tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
-            color = (255, 0, 0)
+            color = (0, 0, 255)
 
             if lblY < 75:
                 lblY = 75
@@ -264,9 +264,13 @@ class AprilTags:
                 ht = abs(cc[1] - aa[1])
                 lblX = int(ctr[0] - wd/2)
                 lblY = int(ctr[1] - ht/2)
+                if lblY < 90:
+                    lblY = 90
+                if lblY > drawingFrame.shape[0]:
+                    lblY = drawingFrame.shape[0]
                 # draw the tag family on the image
                 tagID= '{}: {}'.format(r.tag_family.decode("utf-8"), r.tag_id)
-                color = (255, 0, 0)
+                color = (0, 0, 255)
                 cv2.putText(drawingFrame, tagID, (lblX, lblY - 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                 cv2.putText(drawingFrame, f"X: {atX} {units}", (lblX, lblY - 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                 cv2.putText(drawingFrame, f"Y: {atY} {units}", (lblX, lblY - 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
