@@ -165,7 +165,7 @@ class FRC:
             self.detectionsImage = detectionFrame
         if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:
             if self.gripperImage is not None and self.detectionsImage is not None:
-                img = cv2.vconcat([self.gripperImage, self.detectionsImage])
+                img = cv2.hconcat([self.gripperImage, self.detectionsImage])
             elif self.gripperImage is not None:
                 img = self.gripperImage
             else:
