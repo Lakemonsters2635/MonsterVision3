@@ -135,21 +135,25 @@ class AprilTags:
         x = z * tanAngle_x
         y = -z * tanAngle_y
 
-# The AprilTags are 6" square.  They are printed on a 10" square.  We can use the extra area to make the
-# pose angle calculation more accurate.
+# Because the lower arm of the 2023 robot cuts off a little bit of the image, we cannot expand
+# the region usedfor angle.
 
-        width = xmax - xmin
-        height = ymax - ymin
+# # The AprilTags are 6" square.  They are printed on a 10" square.  We can use the extra area to make the
+# # pose angle calculation more accurate.
 
-        xShift = int(width*(RANSAC_SCALING_FACTOR-1.0)/2)
-        yShift = int(height*(RANSAC_SCALING_FACTOR-1.0)/2)
+#         width = xmax - xmin
+#         height = ymax - ymin
 
-        xmin1 = max(0, xmin - xShift)
-        xmax1 = min(depth.shape[1]-1, xmax + xShift)
-        ymin1 = max(0, ymin - yShift)
-        ymax1 = min(depth.shape[0]-1, ymax+  yShift)
+#         xShift = int(width*(RANSAC_SCALING_FACTOR-1.0)/2)
+#         yShift = int(height*(RANSAC_SCALING_FACTOR-1.0)/2)
 
-        (xAngle, yAngle) = self.getPoseAngles(depth, xmin1, xmax1, ymin1, ymax1, inputShape)
+#         xmin1 = max(0, xmin - xShift)
+#         xmax1 = min(depth.shape[1]-1, xmax + xShift)
+#         ymin1 = max(0, ymin - yShift)
+#         ymax1 = min(depth.shape[0]-1, ymax+  yShift)
+
+#         (xAngle, yAngle) = self.getPoseAngles(depth, xmin1, xmax1, ymin1, ymax1, inputShape)
+        (xAngle, yAngle) = self.getPoseAngles(depth, xmin, xmax, ymin, ymax, inputShape)
 
         return (x,y,z, xAngle, yAngle)
 
