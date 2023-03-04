@@ -194,6 +194,10 @@ class OAK:
         self.camRgb.setFps(self.CAMERA_FPS)
         self.camRgb.setIspScale(self.ispScale[0], self.ispScale[1])
 
+        # On 2023 robot, gripper camera is mounted inverted.
+        
+        self.camRgb.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+
         print("Camera FPS: {}".format(self.camRgb.getFps()))
 
         # For now, RGB needs fixed focus to properly align with depth.
