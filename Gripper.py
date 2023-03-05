@@ -196,7 +196,7 @@ class OAK:
 
         # On 2023 robot, gripper camera is mounted inverted.
         
-        self.camRgb.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+        self.camRgb.setImageOrientation(dai.CameraImageOrientation.NORMAL)
 
         print("Camera FPS: {}".format(self.camRgb.getFps()))
 
