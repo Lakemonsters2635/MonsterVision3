@@ -161,6 +161,8 @@ class FRC:
 
         if cam == "Gripper":
             self.gripperImage = fullFrame
+            cv2.rectangle(self.gripperImage, (40, 0), (270, 128), (255, 255, 255), 4)
+            cv2.ellipse(self.gripperImage, (150, 30), (80, 70), 0, 0, 360, (255,255,255), 4)
         else:
             self.detectionsImage = detectionFrame
         if self.frame_counter % (CAMERA_FPS / DESIRED_FPS) == 0:
