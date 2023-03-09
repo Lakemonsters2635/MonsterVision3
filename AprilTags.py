@@ -72,18 +72,24 @@ class AprilTags:
         yLen = int((ymax - ymin) / stride)
 
         for x in range(xmin, xmax, stride):
-            tanAngle_x = self.calc_tan_angle(x - int(depth.shape[1] / 2), inputShape)
+            try:
+                tanAngle_x = self.calc_tan_angle(x - int(depth.shape[1] / 2), inputShape)
 
-            zv = np.array(depth[ymin:ymax:stride, x]) * self.penucheFactorM + self.penucheFactorB
-            zmask = zv != self.penucheFactorB
+                zv = np.array(depth[ymin:ymax:stride, x]) * self.penucheFactorM + self.penucheFactorB
+                zmask = zv != self.penucheFactorB
 
-            yv = (np.arange(ymin, ymax, stride) - int(depth.shape[0] / 2)) * self.tanHalfHFOV / inputShape
+                yv = (np.arange(ymin, ymax, stride) - int(depth.shape[0] / 2)) * self.tanHalfHFOV / inputShape
 
-            pc = np.array(list(zip(zv*tanAngle_x, -zv*yv, zv)))
-            num = zmask.sum()
+                pc = np.array(list(zip(zv*tanAngle_x, -zv*yv, zv)))
+                num = zmask.sum()
 
-            pointCloud[index:index+num] = pc[zmask]
-            index += num
+                pointCloud[index:index+num] = pc[zmask]
+                index += num
+            except:
+                # line83 periodically fails due to an error similar to:
+                #    operands can not be broadcast together with shapes (12,) and (13,)
+                # should come back and figure out what is going on.
+                pass
 
         plane = RANSAC.RANSAC(pointCloud[0:index], index)
 
