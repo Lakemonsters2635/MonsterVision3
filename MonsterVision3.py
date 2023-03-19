@@ -40,27 +40,35 @@ def displayResults(fullFrame, depthFrameColor, detectionFrame, cam):
 
 
 def runOAK1(devInfo, cam):
-    OAK = importlib.import_module("Gripper")            # Allows substitution of other pilelines!
-    contours = Contours.Contours()
-    oak = OAK.OAK(devInfo, None, useNN=True)
-    nnConfig = oak.read_nn_config()
+    try:
+        OAK = importlib.import_module("Gripper")            # Allows substitution of other pilelines!
+        contours = Contours.Contours()
+        oak = OAK.OAK(devInfo, None, useNN=True)
+        nnConfig = oak.read_nn_config()
 
-    spatialDetectionNetwork = oak.setupSDN(nnConfig)
-    oak.buildPipeline(spatialDetectionNetwork)
+        spatialDetectionNetwork = oak.setupSDN(nnConfig)
+        oak.buildPipeline(spatialDetectionNetwork)
 
-    oak.runPipeline(processDetections, objectsCallback, displayResults, processExtra1, cam, contours)
+        oak.runPipeline(processDetections, objectsCallback, displayResults, processExtra1, cam, contours)
+    except:
+        quit()                                          # If any exception occurs, quit the entire program.
+                                                        # The WPI infrastructure will restart us
     return
 
 def runOAKD(devInfo, cam):
-    OAK = importlib.import_module("MV3")            # Allows substitution of other pilelines!
-    aprilTags = AprilTags.AprilTags("tag16h5")
-    oak = OAK.OAK(devInfo, frc.LaserDotProjectorCurrent)
-    nnConfig = oak.read_nn_config()
+    try:
+        OAK = importlib.import_module("MV3")            # Allows substitution of other pilelines!
+        aprilTags = AprilTags.AprilTags("tag16h5")
+        oak = OAK.OAK(devInfo, frc.LaserDotProjectorCurrent)
+        nnConfig = oak.read_nn_config()
 
-    spatialDetectionNetwork = oak.setupSDN(nnConfig)
-    oak.buildPipeline(spatialDetectionNetwork)
+        spatialDetectionNetwork = oak.setupSDN(nnConfig)
+        oak.buildPipeline(spatialDetectionNetwork)
 
-    oak.runPipeline(processDetections, objectsCallback, displayResults, processExtraD, cam, aprilTags)
+        oak.runPipeline(processDetections, objectsCallback, displayResults, processExtraD, cam, aprilTags)
+    except:
+        quit()                                          # If any exception occurs, quit the entire program.
+                                                        # The WPI infrastructure will restart us
     return
 
 PREVIEW_WIDTH = 200
@@ -124,8 +132,6 @@ if OAK_D_DEVINFO is not None:
 
 frc.runDisplay()
 
-# Wait for both threads to complete (actually, should never happen!)
-if thread1 is not None: thread1.join()
-if threadD is not None: threadD.join()
-
+quit()                              # Should never get here.  If we do, kill everything
+                                    # Let the WPI infrastructure restart us.
 
