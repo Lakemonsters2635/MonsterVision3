@@ -51,6 +51,7 @@ def runOAK1(devInfo, cam):
 
         oak.runPipeline(processDetections, objectsCallback, displayResults, processExtra1, cam, contours)
     except:
+        print("runOAK1 died.  Killing MonsterVision3")
         quit()                                          # If any exception occurs, quit the entire program.
                                                         # The WPI infrastructure will restart us
     return
@@ -67,6 +68,7 @@ def runOAKD(devInfo, cam):
 
         oak.runPipeline(processDetections, objectsCallback, displayResults, processExtraD, cam, aprilTags)
     except:
+        print("runOAKD died.  Killing MonsterVision3")
         quit()                                          # If any exception occurs, quit the entire program.
                                                         # The WPI infrastructure will restart us
     return
@@ -132,6 +134,7 @@ if OAK_D_DEVINFO is not None:
 
 frc.runDisplay()
 
+print("Main thread died.  Killing MonsterVision3")
 quit()                              # Should never get here.  If we do, kill everything
                                     # Let the WPI infrastructure restart us.
 
