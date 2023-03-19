@@ -13,8 +13,10 @@ class AprilTags:
     monoFOV = np.deg2rad(72)
     tanHalfHFOV = math.tan(monoFOV / 2.0)
 
-    penucheFactorM = 0.785
-    penucheFactorB = 10 * 25.4
+    penucheFactorM = .8047
+    penucheFactorB = 5.0061 * 25.4
+    # penucheFactorM = 0.785
+    # penucheFactorB = 10 * 25.4
 
     def calc_tan_angle(self, offset, depthWidth):
         return offset * self.tanHalfHFOV / depthWidth
