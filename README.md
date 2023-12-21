@@ -21,16 +21,22 @@ Change to the MonsterVision3 directory:
 cd MonsterVision3
 ```
 
-For development, it is best to use a Python virtual environment to keep from descending into "version hell."  First install virtualenv
+For development, it is best to use a Python virtual environment to keep from descending into "version hell."  
 
+First install virtualenv
 ```shell
 sudo apt install virtualenv
 ```
 
-Create the virtual environment and activate it.
+Now create the virtual environment and activate it.
 ```shell
 virtualenv env
 . env/bin/activate
+```
+Install cmake:
+
+```shell
+sudo apt install cmake
 ```
 
 Install all of the requirements for running:
@@ -76,7 +82,7 @@ sudo apt update
 sudo apt install code
 ```
 It can be launched with from a terminal via `code` or via the GUI under the **Programming** menu.
-### Install ***GitHub Pull Requests and Issues*** Externsion
+### Install ***GitHub Pull Requests and Issues*** Extension
 To enable GitHub integration, you need to install the above-named extension.  After installation, you'll need to log into your GitHub account.  **TODO** Instructions for doing this.
 ### Debugging Using VS Code
 - After launching VS Code, select **File** | **Open Folder...** and select the `MonsterVision3` directory.
