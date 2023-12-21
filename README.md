@@ -21,7 +21,13 @@ Change to the MonsterVision3 directory:
 cd MonsterVision3
 ```
 
-For development, it is best to use a Python virtual environment to keep from descending into "version hell."  Create the virtual environment and activate it.
+For development, it is best to use a Python virtual environment to keep from descending into "version hell."  First install virtualenv
+
+```shell
+sudo apt install virtualenv
+```
+
+Create the virtual environment and activate it.
 ```shell
 virtualenv env
 . env/bin/activate
